@@ -1,0 +1,26 @@
+{
+  "name": "PostAI",
+  "short_name": "PostAI",
+  "description": "יוצר פוסטים לרשתות חברתיות עם AI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

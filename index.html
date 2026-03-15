@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PostAI" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <title>PostAI — יוצר פוסטים עם AI</title>
+  <style>
+    /* ── Reset & Variables ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #273449;
+      --border: #334155;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-dim: rgba(99,102,241,.15);
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,.4);
+      --transition: .2s ease;
+    }
+
+    html { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100%;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 16px 100px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+    }
+
+    .logo h1 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .icon-btn:hover, .icon-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .badge {
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 999px;
+      min-width: 16px;
+      height: 16px;
+      display: grid;
+      place-items: center;
+      padding: 0 3px;
+    }
+
+    /* ── Tabs ────────────────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 4px;
+      margin-bottom: 24px;
+      gap: 4px;
+    }
+
+    .tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 8px;
+      transition: var(--transition);
+    }
+
+    .tab.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(99,102,241,.4);
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    /* ── Form Controls ───────────────────────────────────────────────────── */
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 16px;
+      padding: 12px 14px;
+      resize: vertical;
+      transition: border-color var(--transition);
+      direction: rtl;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    textarea { min-height: 90px; }
+
+    .char-count {
+      text-align: left;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Platform Selector ───────────────────────────────────────────────── */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .platform-btn {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 8px;
+      transition: var(--transition);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .platform-btn .icon { font-size: 22px; }
+    .platform-btn span { font-size: 11px; }
+
+    .platform-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      color: var(--text);
+    }
+
+    /* ── Pill Options ────────────────────────────────────────────────────── */
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 16px;
+      transition: var(--transition);
+    }
+
+    .pill.selected {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Generate Button ─────────────────────────────────────────────────── */
+    .btn-generate {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 16px;
+      transition: opacity var(--transition), transform var(--transition);
+      margin-bottom: 16px;
+    }
+
+    .btn-generate:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .btn-generate:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .btn-generate.loading::after {
+      content: '';
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result Box ──────────────────────────────────────────────────────── */
+    .result-box {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .result-box.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .result-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 12px;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .action-btn:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .action-btn.success { border-color: var(--success); color: var(--success); }
+    .action-btn.save-btn.saved { border-color: var(--warning); color: var(--warning); }
+
+    .result-text {
+      font-size: 15px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .char-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+
+    .char-pill {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .char-pill.ok { background: rgba(34,197,94,.15); color: var(--success); }
+    .char-pill.warn { background: rgba(245,158,11,.15); color: var(--warning); }
+    .char-pill.over { background: rgba(239,68,68,.15); color: var(--danger); }
+
+    /* ── History (Stage 2) ───────────────────────────────────────────────── */
+    #history-section { display: none; }
+    #history-section.visible { display: block; }
+
+    .history-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .history-title { font-size: 16px; font-weight: 700; }
+
+    .btn-clear-all {
+      background: transparent;
+      border: 1px solid var(--danger);
+      border-radius: var(--radius-sm);
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 6px 12px;
+      transition: var(--transition);
+    }
+
+    .btn-clear-all:hover { background: rgba(239,68,68,.1); }
+
+    .history-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 48px 0;
+      font-size: 15px;
+    }
+
+    .history-empty .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+    .history-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: border-color var(--transition);
+    }
+
+    .history-item.starred { border-color: var(--warning); }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .meta-chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .meta-chip.twitter { background: rgba(29,155,240,.15); color: #1d9bf0; }
+    .meta-chip.threads { background: rgba(255,255,255,.08); color: #e0e0e0; }
+    .meta-chip.linkedin { background: rgba(10,102,194,.2); color: #70b5f9; }
+
+    .meta-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-right: auto;
+    }
+
+    .history-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .history-text.expanded { -webkit-line-clamp: unset; }
+
+    .history-item-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sm {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      transition: var(--transition);
+    }
+
+    .btn-sm:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .btn-sm.star.active { border-color: var(--warning); color: var(--warning); }
+    .btn-sm.danger:hover { background: rgba(239,68,68,.1); border-color: var(--danger); color: var(--danger); }
+
+    /* ── Settings (Push) ─────────────────────────────────────────────────── */
+    #settings-section { display: none; }
+    #settings-section.visible { display: block; }
+
+    .settings-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting-row:last-child { border-bottom: none; }
+
+    .setting-info { flex: 1; }
+    .setting-label { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+    .setting-desc { font-size: 12px; color: var(--text-muted); }
+
+    /* Toggle Switch */
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      flex-shrink: 0;
+      margin-right: 12px;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: var(--transition);
+    }
+
+    .toggle input:checked + .toggle-slider { background: var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+    .push-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      margin-top: 12px;
+    }
+
+    .push-status.granted { background: rgba(34,197,94,.1); color: var(--success); }
+    .push-status.denied { background: rgba(239,68,68,.1); color: var(--danger); }
+    .push-status.default { background: rgba(245,158,11,.1); color: var(--warning); }
+
+    .btn-push {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      margin-top: 14px;
+      width: 100%;
+      transition: opacity var(--transition);
+    }
+
+    .btn-push:hover { opacity: .85; }
+    .btn-push:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-test-push {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 16px;
+      margin-top: 8px;
+      width: 100%;
+      transition: var(--transition);
+    }
+
+    .btn-test-push:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Toast ───────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 12px 20px;
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      white-space: nowrap;
+      z-index: 9999;
+    }
+
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Separator ───────────────────────────────────────────────────────── */
+    .section-sep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .section-sep::before, .section-sep::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">✨</div>
+      <h1>PostAI</h1>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="history-btn" title="היסטוריה" onclick="showTab('history')">
+        📋
+        <span class="badge" id="history-badge" style="display:none">0</span>
+      </button>
+      <button class="icon-btn" id="settings-btn" title="הגדרות" onclick="showTab('settings')">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tab-create" onclick="showTab('create')">✨ יצירה</button>
+    <button class="tab" id="tab-history" onclick="showTab('history')">📋 היסטוריה</button>
+    <button class="tab" id="tab-settings" onclick="showTab('settings')">⚙️ הגדרות</button>
+  </div>
+
+  <!-- ── CREATE TAB ──────────────────────────────────────────────────────── -->
+  <div id="create-section">
+
+    <!-- Platform -->
+    <div class="card">
+      <div class="card-title">פלטפורמה</div>
+      <div class="platform-grid">
+        <button class="platform-btn selected" data-platform="twitter" onclick="selectPlatform(this)">
+          <span class="icon">𝕏</span>
+          <span>Twitter/X</span>
+        </button>
+        <button class="platform-btn" data-platform="threads" onclick="selectPlatform(this)">
+          <span class="icon">🧵</span>
+          <span>Threads</span>
+        </button>
+        <button class="platform-btn" data-platform="linkedin" onclick="selectPlatform(this)">
+          <span class="icon">💼</span>
+          <span>LinkedIn</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Topic -->
+    <div class="card">
+      <div class="card-title">נושא הפוסט</div>
+      <textarea
+        id="topic-input"
+        placeholder="למשל: איך AI משנה את ניתוח מניות בשנת 2025"
+        maxlength="300"
+        oninput="updateCharCount()"
+      ></textarea>
+      <div class="char-count"><span id="char-count">0</span>/300</div>
+    </div>
+
+    <!-- Tone -->
+    <div class="card">
+      <div class="card-title">טון</div>
+      <div class="pill-group">
+        <button class="pill selected" data-tone="professional" onclick="selectPill('tone', this)">🎩 מקצועי</button>
+        <button class="pill" data-tone="casual" onclick="selectPill('tone', this)">😎 שיחתי</button>
+        <button class="pill" data-tone="bold" onclick="selectPill('tone', this)">🔥 נועז</button>
+        <button class="pill" data-tone="educational" onclick="selectPill('tone', this)">📚 חינוכי</button>
+      </div>
+    </div>
+
+    <!-- Length -->
+    <div class="card">
+      <div class="card-title">אורך</div>
+      <div class="pill-group">
+        <button class="pill" data-length="short" onclick="selectPill('length', this)">⚡ קצר</button>
+        <button class="pill selected" data-length="medium" onclick="selectPill('length', this)">📝 בינוני</button>
+        <button class="pill" data-length="long" onclick="selectPill('length', this)">📖 ארוך</button>
+      </div>
+    </div>
+
+    <!-- Generate -->
+    <button class="btn-generate" id="gen-btn" onclick="generate()">
+      ✨ צור פוסט
+    </button>
+
+    <!-- Result -->
+    <div class="result-box" id="result-box">
+      <div class="result-header">
+        <span class="result-label">הפוסט שלך</span>
+        <div class="result-actions">
+          <button class="action-btn save-btn" id="save-btn" onclick="savePost()" title="שמור">
+            🔖 שמור
+          </button>
+          <button class="action-btn" onclick="copyPost()" title="העתק">
+            📋 העתק
+          </button>
+        </div>
+      </div>
+      <div class="result-text" id="result-text"></div>
+      <div class="char-info">
+        <span class="char-pill" id="result-char-pill"></span>
+        <button class="btn-sm" onclick="generate()" style="font-size:12px">🔄 נסה שוב</button>
+      </div>
+    </div>
+
+    <div class="section-sep">רעיונות</div>
+
+    <!-- Suggestions -->
+    <div class="card">
+      <div class="card-title">נושאים מומלצים</div>
+      <div class="pill-group" style="flex-direction:column; gap:8px">
+        <button class="pill" style="text-align:right; border-radius:var(--radius-sm); padding:10px 14px"
+          onclick="useSuggestion('5 טרנדים ב-AI שישנו את שוק ההון ב-2025')">
+          📈 5 טרנדים ב-AI שישנו את שוק ההון ב-2025
+        </button>
+        <button class="pill" style="text-align:right; border-radius:var(--radius-sm); padding:10px 14px"
+          onclick="useSuggestion('האם ChatGPT יכול לנהל את תיק ההשקעות שלך?')">
+          🤖 האם ChatGPT יכול לנהל את תיק ההשקעות שלך?
+        </button>
+        <button class="pill" style="text-align:right; border-radius:var(--radius-sm); padding:10px 14px"
+          onclick="useSuggestion('טעות אחת שרוב משקיעי ה-AI עושים')">
+          ⚠️ טעות אחת שרוב משקיעי ה-AI עושים
+        </button>
+        <button class="pill" style="text-align:right; border-radius:var(--radius-sm); padding:10px 14px"
+          onclick="useSuggestion('DeFi vs בנקים מסורתיים: מי ינצח ב-2026?')">
+          💰 DeFi vs בנקים מסורתיים: מי ינצח ב-2026?
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /create-section -->
+
+  <!-- ── HISTORY TAB ─────────────────────────────────────────────────────── -->
+  <div id="history-section">
+    <div class="history-controls">
+      <span class="history-title">📋 פוסטים שמורים</span>
+      <button class="btn-clear-all" onclick="clearAllHistory()">מחק הכל</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- ── SETTINGS TAB ────────────────────────────────────────────────────── -->
+  <div id="settings-section">
+    <div class="settings-title">⚙️ הגדרות</div>
+
+    <div class="card">
+      <div class="card-title">התראות Push</div>
+
+      <div id="push-status-box"></div>
+
+      <button class="btn-push" id="btn-enable-push" onclick="requestPushPermission()">
+        🔔 הפעל התראות יומיות
+      </button>
+      <button class="btn-test-push" id="btn-test-push" onclick="testPushNotification()" style="display:none">
+        🧪 שלח התראת בדיקה
+      </button>
+
+      <div class="setting-row" style="margin-top:16px">
+        <div class="setting-info">
+          <div class="setting-label">תזכורת יומית</div>
+          <div class="setting-desc">קבל תזכורת בשעה 09:00 כל יום</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="daily-reminder-toggle" onchange="saveDailyReminderPref()" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">נתונים</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">פוסטים שמורים</div>
+          <div class="setting-desc" id="storage-info">מחשב...</div>
+        </div>
+        <button class="btn-sm danger" onclick="clearAllHistory()">מחק</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">אודות</div>
+      <div style="color:var(--text-muted); font-size:14px; line-height:1.8">
+        <div>PostAI v2.0</div>
+        <div>Powered by Gemini 2.0 Flash</div>
+        <div>בנוי עם ❤️ בעברית</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const state = {
+  platform: 'twitter',
+  tone: 'professional',
+  length: 'medium',
+  currentPost: '',
+  currentSaved: false
+};
+
+const PLATFORM_LIMITS = { twitter: 280, threads: 500, linkedin: 700 };
+const STORAGE_KEY = 'postai_history_v2';
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
+function showTab(name) {
+  ['create', 'history', 'settings'].forEach(t => {
+    document.getElementById(`${t}-section`).classList.toggle('visible', t === 'history' || t === 'settings' ? false : true);
+    document.getElementById(`tab-${t}`)?.classList.remove('active');
+  });
+
+  document.getElementById('create-section').style.display = name === 'create' ? 'block' : 'none';
+  document.getElementById('history-section').classList.toggle('visible', name === 'history');
+  document.getElementById('settings-section').classList.toggle('visible', name === 'settings');
+
+  document.getElementById(`tab-${name}`)?.classList.add('active');
+
+  if (name === 'history') renderHistory();
+  if (name === 'settings') { renderPushStatus(); updateStorageInfo(); }
+}
+
+// Init create section visibility
+document.getElementById('create-section').style.display = 'block';
+
+// ═══════════════════════════════════════════════════════════════
+// PLATFORM / TONE / LENGTH SELECTORS
+// ═══════════════════════════════════════════════════════════════
+function selectPlatform(btn) {
+  document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.platform = btn.dataset.platform;
+  updateResultCharPill();
+}
+
+function selectPill(group, btn) {
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state[group] = btn.dataset[group];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAR COUNT
+// ═══════════════════════════════════════════════════════════════
+function updateCharCount() {
+  const len = document.getElementById('topic-input').value.length;
+  document.getElementById('char-count').textContent = len;
+}
+
+function updateResultCharPill() {
+  const pill = document.getElementById('result-char-pill');
+  if (!state.currentPost) return;
+  const len = state.currentPost.length;
+  const limit = PLATFORM_LIMITS[state.platform] || 280;
+  const pct = len / limit;
+  pill.textContent = `${len} / ${limit} תווים`;
+  pill.className = 'char-pill ' + (pct > 1 ? 'over' : pct > 0.85 ? 'warn' : 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUGGESTIONS
+// ═══════════════════════════════════════════════════════════════
+function useSuggestion(text) {
+  const input = document.getElementById('topic-input');
+  input.value = text;
+  updateCharCount();
+  input.focus();
+  showTab('create');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GENERATE
+// ═══════════════════════════════════════════════════════════════
+async function generate() {
+  const topic = document.getElementById('topic-input').value.trim();
+  if (!topic) { toast('✍️ הכנס נושא לפוסט'); return; }
+
+  const btn = document.getElementById('gen-btn');
+  const resultBox = document.getElementById('result-box');
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.textContent = '';
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, platform: state.platform, tone: state.tone, length: state.length })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      toast('❌ ' + (data.error || 'שגיאה ביצירת הפוסט'));
+      return;
+    }
+
+    state.currentPost = data.post;
+    state.currentSaved = false;
+
+    document.getElementById('result-text').textContent = data.post;
+    resultBox.classList.add('visible');
+
+    // Reset save btn
+    const saveBtn = document.getElementById('save-btn');
+    saveBtn.textContent = '🔖 שמור';
+    saveBtn.classList.remove('saved');
+
+    updateResultCharPill();
+
+    resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    toast('✅ הפוסט מוכן!');
+  } catch (err) {
+    toast('🔌 שגיאת רשת — בדוק חיבור');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.textContent = '✨ צור פוסט';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COPY
+// ═══════════════════════════════════════════════════════════════
+async function copyPost() {
+  if (!state.currentPost) return;
+  try {
+    await navigator.clipboard.writeText(state.currentPost);
+    toast('📋 הועתק ללוח!');
+  } catch {
+    toast('❌ לא ניתן להעתיק');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STAGE 2 — HISTORY & SAVE
+// ═══════════════════════════════════════════════════════════════
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveHistory(arr) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  updateHistoryBadge();
+}
+
+function updateHistoryBadge() {
+  const count = getHistory().length;
+  const badge = document.getElementById('history-badge');
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = 'grid';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function savePost() {
+  if (!state.currentPost || state.currentSaved) return;
+
+  const history = getHistory();
+  const entry = {
+    id: Date.now(),
+    post: state.currentPost,
+    platform: state.platform,
+    tone: state.tone,
+    length: state.length,
+    starred: false,
+    date: new Date().toISOString()
+  };
+  history.unshift(entry);
+  saveHistory(history);
+  state.currentSaved = true;
+
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '✅ נשמר';
+  btn.classList.add('saved');
+
+  toast('🔖 הפוסט נשמר בהיסטוריה!');
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const history = getHistory();
+
+  if (history.length === 0) {
+    list.innerHTML = `
+      <div class="history-empty">
+        <div class="empty-icon">📭</div>
+        <div>אין פוסטים שמורים עדיין</div>
+        <div style="font-size:13px;margin-top:8px;color:var(--text-muted)">
+          צור פוסט ולחץ "שמור"
+        </div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = history.map(entry => {
+    const date = new Date(entry.date);
+    const dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) +
+                    ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    const escaped = entry.post.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `
+    <div class="history-item ${entry.starred ? 'starred' : ''}" id="hi-${entry.id}">
+      <div class="history-meta">
+        <span class="meta-chip ${entry.platform}">${platformLabel(entry.platform)}</span>
+        <span class="meta-chip">${toneLabel(entry.tone)}</span>
+        ${entry.starred ? '<span style="font-size:14px">⭐</span>' : ''}
+        <span class="meta-date">${dateStr}</span>
+      </div>
+      <div class="history-text" id="ht-${entry.id}">${escaped}</div>
+      <div class="history-item-actions">
+        <button class="btn-sm" onclick="toggleExpand('${entry.id}')">👁 הצג</button>
+        <button class="btn-sm" onclick="copyHistoryPost('${entry.id}')">📋 העתק</button>
+        <button class="btn-sm" onclick="recyclePost('${entry.id}')">🔄 מחזר</button>
+        <button class="btn-sm star ${entry.starred ? 'active' : ''}" onclick="toggleStar('${entry.id}')">
+          ${entry.starred ? '⭐' : '☆'} כוכב
+        </button>
+        <button class="btn-sm danger" onclick="deletePost('${entry.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function platformLabel(p) {
+  return { twitter: '𝕏 Twitter', threads: '🧵 Threads', linkedin: '💼 LinkedIn' }[p] || p;
+}
+function toneLabel(t) {
+  return { professional: '🎩 מקצועי', casual: '😎 שיחתי', bold: '🔥 נועז', educational: '📚 חינוכי' }[t] || t;
+}
+
+function toggleExpand(id) {
+  const el = document.getElementById(`ht-${id}`);
+  el.classList.toggle('expanded');
+}
+
+async function copyHistoryPost(id) {
+  const history = getHistory();
+  const entry = history.find(h => h.id == id);
+  if (!entry) return;
+  try {
+    await navigator.clipboard.writeText(entry.post);
+    toast('📋 הועתק ללוח!');
+  } catch { toast('❌ לא ניתן להעתיק'); }
+}
+
+function recyclePost(id) {
+  const history = getHistory();
+  const entry = history.find(h => h.id == id);
+  if (!entry) return;
+
+  // Load into create form
+  document.getElementById('topic-input').value = '';
+  updateCharCount();
+
+  // Set platform
+  document.querySelectorAll('.platform-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.platform === entry.platform);
+  });
+  state.platform = entry.platform;
+
+  // Set tone
+  document.querySelectorAll('[data-tone]').forEach(b => {
+    b.classList.toggle('selected', b.dataset.tone === entry.tone);
+  });
+  state.tone = entry.tone;
+
+  showTab('create');
+  toast('🔄 הגדרות נטענו — הכנס נושא חדש וצור!');
+}
+
+function toggleStar(id) {
+  const history = getHistory();
+  const entry = history.find(h => h.id == id);
+  if (!entry) return;
+  entry.starred = !entry.starred;
+  saveHistory(history);
+  renderHistory();
+  toast(entry.starred ? '⭐ סומן כמצליח!' : '☆ הכוכב הוסר');
+}
+
+function deletePost(id) {
+  const history = getHistory().filter(h => h.id != id);
+  saveHistory(history);
+  renderHistory();
+  updateStorageInfo();
+  toast('🗑 נמחק');
+}
+
+function clearAllHistory() {
+  if (!getHistory().length) { toast('📭 אין פוסטים למחיקה'); return; }
+  if (!confirm('למחוק את כל הפוסטים השמורים?')) return;
+  saveHistory([]);
+  renderHistory();
+  updateStorageInfo();
+  toast('🗑 כל הפוסטים נמחקו');
+}
+
+function updateStorageInfo() {
+  const count = getHistory().length;
+  document.getElementById('storage-info').textContent = `${count} פוסטים שמורים`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STAGE 3 — PUSH NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+function pushSupported() {
+  return 'Notification' in window && 'serviceWorker' in navigator;
+}
+
+function renderPushStatus() {
+  const box = document.getElementById('push-status-box');
+  const btnEnable = document.getElementById('btn-enable-push');
+  const btnTest = document.getElementById('btn-test-push');
+
+  if (!pushSupported()) {
+    box.innerHTML = `<div class="push-status denied">❌ הדפדפן לא תומך בהתראות</div>`;
+    btnEnable.disabled = true;
+    return;
+  }
+
+  const perm = Notification.permission;
+
+  if (perm === 'granted') {
+    box.innerHTML = `<div class="push-status granted">✅ התראות מופעלות</div>`;
+    btnEnable.style.display = 'none';
+    btnTest.style.display = 'block';
+  } else if (perm === 'denied') {
+    box.innerHTML = `<div class="push-status denied">🚫 התראות חסומות — אפשר בהגדרות הדפדפן</div>`;
+    btnEnable.disabled = true;
+  } else {
+    box.innerHTML = `<div class="push-status default">🔔 התראות כבויות</div>`;
+    btnEnable.disabled = false;
+    btnEnable.style.display = 'block';
+    btnTest.style.display = 'none';
+  }
+
+  // Restore daily reminder toggle
+  const tog = document.getElementById('daily-reminder-toggle');
+  tog.checked = localStorage.getItem('postai_daily_reminder') === 'true';
+}
+
+async function requestPushPermission() {
+  if (!pushSupported()) return;
+
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      toast('✅ התראות הופעלו!');
+      // Schedule daily reminder if toggle on
+      if (localStorage.getItem('postai_daily_reminder') === 'true') {
+        scheduleDailyReminder();
+      }
+    } else {
+      toast('❌ לא אושר — ניתן לשנות בהגדרות');
+    }
+    renderPushStatus();
+  } catch (err) {
+    toast('❌ שגיאה בהפעלת התראות');
+  }
+}
+
+function testPushNotification() {
+  if (Notification.permission !== 'granted') { toast('❌ אין הרשאה'); return; }
+
+  // Use service worker if available, else fallback
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(reg => {
+      reg.showNotification('PostAI 🚀', {
+        body: 'הגיע הזמן לפרסם פוסט היום!',
+        icon: '/icons/icon-192.png',
+        dir: 'rtl',
+        lang: 'he',
+        vibrate: [200, 100, 200]
+      });
+      toast('🔔 התראת בדיקה נשלחה!');
+    });
+  } else {
+    new Notification('PostAI 🚀', { body: 'הגיע הזמן לפרסם פוסט היום!' });
+    toast('🔔 התראת בדיקה!');
+  }
+}
+
+function saveDailyReminderPref() {
+  const val = document.getElementById('daily-reminder-toggle').checked;
+  localStorage.setItem('postai_daily_reminder', String(val));
+  if (val && Notification.permission === 'granted') {
+    scheduleDailyReminder();
+    toast('⏰ תזכורת יומית הופעלה');
+  } else if (!val) {
+    toast('⏰ תזכורת יומית כובתה');
+  } else {
+    toast('🔔 יש להפעיל התראות קודם');
+    document.getElementById('daily-reminder-toggle').checked = false;
+  }
+}
+
+function scheduleDailyReminder() {
+  // Client-side daily reminder via setTimeout (resets on reload)
+  // For production, use a server-side push scheduler
+  const now = new Date();
+  const next9am = new Date();
+  next9am.setHours(9, 0, 0, 0);
+  if (next9am <= now) next9am.setDate(next9am.getDate() + 1);
+
+  const delay = next9am - now;
+  setTimeout(() => {
+    testPushNotification();
+    scheduleDailyReminder(); // reschedule
+  }, delay);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SERVICE WORKER
+// ═══════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(console.error);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+updateHistoryBadge();
+
+// Auto-schedule daily reminder if previously enabled
+if (localStorage.getItem('postai_daily_reminder') === 'true' &&
+    Notification.permission === 'granted') {
+  scheduleDailyReminder();
+}
+</script>
+</body>
+</html>
