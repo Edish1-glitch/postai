@@ -65,8 +65,9 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.json();
-      console.error('Gemini error:', err);
-      return res.status(502).json({ error: 'שגיאה מ-Gemini API' });
+      console.error('Gemini error:', JSON.stringify(err));
+      const geminiMsg = err?.error?.message || JSON.stringify(err);
+      return res.status(502).json({ error: `Gemini: ${geminiMsg}` });
     }
 
     const data = await response.json();
