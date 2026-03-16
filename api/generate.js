@@ -21,10 +21,19 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key חסר בהגדרות השרת' });
   }
 
+  const platformLimits = { twitter: 280, threads: 500, linkedin: 700 };
+  const charTargets = {
+    twitter:  { short: 120, medium: 180, long: 260 },
+    threads:  { short: 200, medium: 350, long: 480 },
+    linkedin: { short: 300, medium: 500, long: 670 }
+  };
+  const hardLimit  = platformLimits[platform] || 280;
+  const charTarget = (charTargets[platform] || charTargets.twitter)[length] || 180;
+
   const platformInstructions = {
-    twitter: `Twitter/X — עד 280 תווים בדיוק. משפט אחד חזק + hashtags.`,
-    threads: `Threads — עד 500 תווים. שיחתי, אפשר לשאול שאלה בסוף.`,
-    linkedin: `LinkedIn — עד 700 תווים. מקצועי, call-to-action ברור בסוף.`
+    twitter: `Twitter/X — מגבלה מוחלטת: ${hardLimit} תווים. משפט אחד חזק + hashtags.`,
+    threads: `Threads — מגבלה מוחלטת: ${hardLimit} תווים. שיחתי, אפשר לשאול שאלה בסוף.`,
+    linkedin: `LinkedIn — מגבלה מוחלטת: ${hardLimit} תווים. מקצועי, call-to-action ברור בסוף.`
   };
 
   const toneMap = {
@@ -35,9 +44,9 @@ export default async function handler(req, res) {
   };
 
   const lengthMap = {
-    short: 'קצר מאוד — משפט פותח חזק + משפט סיכום. ללא ריפוד.',
-    medium: 'בינוני — פתיחה חזקה + 2-3 משפטי גוף + סיום.',
-    long: 'ארוך — נצל את כל מגבלת התווים של הפלטפורמה.'
+    short:  `קצר — עד ${charTarget} תווים. משפט פותח חזק + משפט סיכום. ללא ריפוד.`,
+    medium: `בינוני — עד ${charTarget} תווים. פתיחה חזקה + 2-3 משפטי גוף + סיום.`,
+    long:   `ארוך — עד ${charTarget} תווים. נצל כמעט את כל מגבלת הפלטפורמה.`
   };
 
   const formatInstructions = {
@@ -81,6 +90,7 @@ export default async function handler(req, res) {
 ${formatInstructions[format] || formatInstructions.hook}
 
 חוקי ברזל:
+✅ HARD LIMIT: כל הפוסט (כולל רווחים, שורות חדשות ו-hashtags) חייב להיות עד ${charTarget} תווים — ספור לפני שאתה מסיים
 ✅ חפש נתונים אמיתיים ועדכניים לפני שאתה כותב — השתמש ב-Google Search
 ✅ השתמש רק בנתונים שמצאת — אל תמציא סטטיסטיקות
 ✅ אם יש מקור לנתון (חברה, דוח, מחקר) — ציין אותו בתוך הפוסט
@@ -125,7 +135,21 @@ ${formatInstructions[format] || formatInstructions.hook}
       return res.status(502).json({ error: 'לא התקבלה תשובה מה-AI' });
     }
 
-    return res.status(200).json({ post: text.trim() });
+    let post = text.trim();
+    // Server-side hard cap — safety net if Gemini ignores the char limit
+    if (post.length > hardLimit) {
+      const truncated = post.slice(0, hardLimit);
+      const lastBreak = Math.max(
+        truncated.lastIndexOf('!'),
+        truncated.lastIndexOf('?'),
+        truncated.lastIndexOf('\n'),
+        truncated.lastIndexOf('.')
+      );
+      post = lastBreak > hardLimit * 0.5
+        ? post.slice(0, lastBreak + 1)
+        : truncated.slice(0, truncated.lastIndexOf(' '));
+    }
+    return res.status(200).json({ post });
   } catch (err) {
     console.error('Handler error:', err);
     return res.status(500).json({ error: 'שגיאת שרת פנימית' });
