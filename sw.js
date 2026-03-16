@@ -1,4 +1,4 @@
-const CACHE_NAME = 'postai-v3';
+const CACHE_NAME = 'postai-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -35,7 +35,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static: cache-first, fallback to network
+  // HTML: network-first (תמיד גרסה עדכנית), fallback לקאש
+  if (url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // שאר הנכסים (אייקונים וכו׳): cache-first
   event.respondWith(
     caches.match(event.request).then(
       (cached) => cached || fetch(event.request).then((response) => {
