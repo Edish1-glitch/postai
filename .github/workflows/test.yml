@@ -75,7 +75,7 @@ jobs:
       - name: Test deployed API
         run: |
           STATUS=$(curl -s -o /tmp/resp.json -w "%{http_code}" --max-time 20 \
-            -X POST https://postai-nine.vercel.app/api/generate \
+            -X POST "https://postai-nine.vercel.app/api/generate?mock=1" \
             -H "Content-Type: application/json" \
             -d '{"topic":"test","platform":"twitter","tone":"professional","length":"short"}')
           echo "Status: $STATUS"
