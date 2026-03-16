@@ -57,10 +57,10 @@ export default async function handler(req, res) {
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.85,
-            maxOutputTokens: 2048
-          },
-          thinkingConfig: {
-            thinkingBudget: 0
+            maxOutputTokens: 2048,
+            thinkingConfig: {
+              thinkingBudget: 0
+            }
           }
         })
       }
