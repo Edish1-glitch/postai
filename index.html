@@ -911,9 +911,20 @@ function useSuggestion(text) {
 // ═══════════════════════════════════════════════════════════════
 // GENERATE
 // ═══════════════════════════════════════════════════════════════
+let _lastGenTime = 0;
+const GEN_COOLDOWN_MS = 20000;
+
 async function generate() {
   const topic = document.getElementById('topic-input').value.trim();
   if (!topic) { toast('✍️ הכנס נושא לפוסט'); return; }
+
+  const now = Date.now();
+  const elapsed = now - _lastGenTime;
+  if (elapsed < GEN_COOLDOWN_MS) {
+    const secs = Math.ceil((GEN_COOLDOWN_MS - elapsed) / 1000);
+    toast(`⏳ המתן עוד ${secs} שניות`);
+    return;
+  }
 
   const btn = document.getElementById('gen-btn');
   const resultBox = document.getElementById('result-box');
@@ -936,6 +947,7 @@ async function generate() {
       return;
     }
 
+    _lastGenTime = Date.now();
     state.currentPost = data.post;
     state.currentSaved = false;
 
