@@ -97,7 +97,8 @@ ${formatInstructions[format] || formatInstructions.hook}
           tools: [{ googleSearch: {} }],
           generationConfig: {
             temperature: 0.92,
-            maxOutputTokens: 2048
+            maxOutputTokens: 4096,
+            thinkingConfig: { thinkingBudget: 0 }
           }
         })
       }
