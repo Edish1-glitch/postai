@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { topic, platform, tone, length } = req.body;
+  const { topic, platform, tone, length, format } = req.body;
 
   if (!topic) {
     return res.status(400).json({ error: 'נדרש נושא לפוסט' });
@@ -15,37 +15,73 @@ export default async function handler(req, res) {
   }
 
   const platformInstructions = {
-    twitter: `טוויטר/X: עד 280 תווים. קצר, אימפקטי, hashtags בסוף.`,
-    threads: `Threads: עד 500 תווים. סיפורי, שיחתי, אפשר לשאול שאלה בסוף.`,
-    linkedin: `LinkedIn: עד 700 תווים. מקצועי, ערך עסקי, call-to-action בסוף.`
+    twitter: `Twitter/X — עד 280 תווים בדיוק. משפט אחד חזק + hashtags.`,
+    threads: `Threads — עד 500 תווים. שיחתי, אפשר לשאול שאלה בסוף.`,
+    linkedin: `LinkedIn — עד 700 תווים. מקצועי, call-to-action ברור בסוף.`
   };
 
   const toneMap = {
-    professional: 'מקצועי ואמין',
-    casual: 'שיחתי וקליל',
-    bold: 'נועז ופרובוקטיבי',
-    educational: 'חינוכי ומעניין'
+    professional: 'מקצועי ואמין, מדבר כמו מומחה שיודע על מה הוא מדבר',
+    casual: 'שיחתי וקליל, כמו שיחה עם חבר חכם',
+    bold: 'נועז ופרובוקטיבי, לא מפחד לאתגר',
+    educational: 'חינוכי, מסביר מורכב בפשטות'
   };
 
   const lengthMap = {
-    short: 'קצר מאד — משפט אחד עד שניים',
-    medium: 'בינוני — 3-5 משפטים',
-    long: 'ארוך — מנצל את כל מגבלת התווים'
+    short: 'קצר מאוד — משפט פותח חזק + משפט סיכום. ללא ריפוד.',
+    medium: 'בינוני — פתיחה חזקה + 2-3 משפטי גוף + סיום.',
+    long: 'ארוך — נצל את כל מגבלת התווים של הפלטפורמה.'
   };
 
-  const prompt = `אתה מומחה לשיווק דיגיטלי בתחום AI ופיננסים.
-צור פוסט לרשת חברתית בעברית בנושא: "${topic}"
+  const formatInstructions = {
+    hook: `פורמט: HOOK — פתיחת עצירה
+השורה הראשונה חייבת לעצור גלילה. השתמש באחת מהגישות:
+• "X% מהמשקיעים לא יודעים ש..."
+• "הדבר היחיד שלמדתי אחרי X שנים בשוק:"
+• "הטעות שעלתה לי X ש' — ומה שלמדתי"
+המשך: תובנה מפתיעה קצרה + נקודת מבט חדשה.`,
 
+    hottake: `פורמט: HOT TAKE — דעה שמחלקת
+פתח ב"דעה לא פופולרית:" או "אמת שאף אחד לא אומר:".
+הצג עמדה שמאתגרת קונבנציה מקובלת — עם לוגיקה, לא סתם פרובוקציה.
+סיים עם שאלה פתוחה לתגובות.`,
+
+    story: `פורמט: STORY — סיפור אישי בגוף ראשון
+מבנה: מצב → מה קרה → מה למדתי.
+כתוב בגוף ראשון ("אני", "שלי"). השתמש במספרים ספציפיים.
+פרטים אמיתיים (תאריכים, סכומים) הופכים סיפור לאמין.
+סיים עם לקח שהקורא יכול ליישם.`,
+
+    datadrop: `פורמט: DATA DROP — עובדה שמזעזעת
+פתח בסטטיסטיקה, אחוז או עובדה מפתיעה — ספציפית.
+שורה 2: מה זה אומר למשקיע הממוצע?
+סיים עם call-to-action חד.`,
+
+    tips: `פורמט: LIST — רשימת ערך מעשי
+כותרת: "X דברים ש[תובנה חכמה]:"
+כל פריט: מספר + טיפ חד + למה זה חשוב.
+סיים עם משפט מניע לפעולה.`
+  };
+
+  const prompt = `אתה יוצר תוכן ויראלי בתחום AI ופיננסים.
+קהל: משקיעים, יזמים, אנשי טכנולוגיה — מתחילים עד מקצוענים.
+סגנון: ${toneMap[tone] || toneMap.professional}.
+
+נושא: "${topic}"
 פלטפורמה: ${platformInstructions[platform] || platformInstructions.twitter}
-טון: ${toneMap[tone] || toneMap.professional}
 אורך: ${lengthMap[length] || lengthMap.medium}
 
-כללים חשובים:
-- כתוב בעברית בלבד
-- RTL מלא
-- אל תוסיף הסברים — רק את הפוסט עצמו
-- אל תוסיף מרכאות סביב הפוסט
-- hashtags רלוונטיים בסוף (2-4)`;
+${formatInstructions[format] || formatInstructions.hook}
+
+חוקי ברזל:
+✅ שורה ראשונה — עוצרת גלילה, חייבת להיות חזקה
+✅ מספרים ספציפיים בלבד (לא "הרבה" — כתוב "73%")
+✅ עברית בלבד, RTL
+✅ 2-3 hashtags רלוונטיים בסוף
+
+❌ אל תתחיל ב"בעולם של..." / "בעידן ה-AI..." — קלישאה
+❌ אל תכתוב "חשוב לזכור" / "כדאי לציין" — משעמם
+❌ אל תוסיף הסברים, הקדמות או מרכאות — רק הפוסט`;
 
   try {
     const response = await fetch(
@@ -56,7 +92,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.85,
+            temperature: 0.92,
             maxOutputTokens: 1024,
             thinkingConfig: { thinkingBudget: 0 }
           }

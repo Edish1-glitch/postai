@@ -702,6 +702,18 @@
       </div>
     </div>
 
+    <!-- Format -->
+    <div class="card">
+      <div class="card-title">פורמט</div>
+      <div class="pill-group" style="flex-wrap:wrap;gap:8px">
+        <button class="pill selected" data-format="hook" onclick="selectPill('format', this)">🪝 Hook</button>
+        <button class="pill" data-format="hottake" onclick="selectPill('format', this)">🔥 Hot Take</button>
+        <button class="pill" data-format="story" onclick="selectPill('format', this)">📖 סיפור</button>
+        <button class="pill" data-format="datadrop" onclick="selectPill('format', this)">📊 Data Drop</button>
+        <button class="pill" data-format="tips" onclick="selectPill('format', this)">🎯 טיפים</button>
+      </div>
+    </div>
+
     <!-- Length -->
     <div class="card">
       <div class="card-title">אורך</div>
@@ -818,6 +830,7 @@ const state = {
   platform: 'twitter',
   tone: 'professional',
   length: 'medium',
+  format: 'hook',
   currentPost: '',
   currentSaved: false
 };
@@ -1060,7 +1073,7 @@ async function generate() {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic, platform: state.platform, tone: state.tone, length: state.length })
+      body: JSON.stringify({ topic, platform: state.platform, tone: state.tone, length: state.length, format: state.format })
     });
 
     const data = await res.json();
