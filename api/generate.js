@@ -74,11 +74,14 @@ export default async function handler(req, res) {
 ${formatInstructions[format] || formatInstructions.hook}
 
 חוקי ברזל:
+✅ חפש נתונים אמיתיים ועדכניים לפני שאתה כותב — השתמש ב-Google Search
+✅ השתמש רק בנתונים שמצאת — אל תמציא סטטיסטיקות
+✅ אם יש מקור לנתון (חברה, דוח, מחקר) — ציין אותו בתוך הפוסט
 ✅ שורה ראשונה — עוצרת גלילה, חייבת להיות חזקה
-✅ מספרים ספציפיים בלבד (לא "הרבה" — כתוב "73%")
 ✅ עברית בלבד, RTL
 ✅ 2-3 hashtags רלוונטיים בסוף
 
+❌ אל תמציא אחוזים או נתונים — רק עובדות מאומתות
 ❌ אל תתחיל ב"בעולם של..." / "בעידן ה-AI..." — קלישאה
 ❌ אל תכתוב "חשוב לזכור" / "כדאי לציין" — משעמם
 ❌ אל תוסיף הסברים, הקדמות או מרכאות — רק הפוסט`;
@@ -91,10 +94,10 @@ ${formatInstructions[format] || formatInstructions.hook}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ googleSearch: {} }],
           generationConfig: {
             temperature: 0.92,
-            maxOutputTokens: 1024,
-            thinkingConfig: { thinkingBudget: 0 }
+            maxOutputTokens: 1024
           }
         })
       }
