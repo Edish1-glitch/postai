@@ -10,27 +10,22 @@ jobs:
   validate:
     name: Validate Project
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Check required files exist
         run: |
-          echo "🔍 בודק קבצים נדרשים..."
           files=("index.html" "sw.js" "manifest.json" "vercel.json" "api/generate.js" "package.json")
           fail=0
           for f in "${files[@]}"; do
-            if [ -f "$f" ]; then
-              echo "✅ $f"
-            else
-              echo "❌ חסר: $f"
-              fail=1
-            fi
+            if [ -f "$f" ]; then echo "✅ $f"
+            else echo "❌ חסר: $f"; fail=1; fi
           done
           [ $fail -eq 0 ] || exit 1
 
       - name: Validate JSON files
         run: |
-          echo "🔍 בודק תקינות JSON..."
           for f in manifest.json vercel.json package.json; do
             python3 -c "import json; json.load(open('$f'))" \
               && echo "✅ $f תקין" \
@@ -40,77 +35,49 @@ jobs:
       - name: Check manifest RTL + Hebrew
         run: |
           python3 - <<'EOF'
-          import json, sys
+          import json
           m = json.load(open('manifest.json'))
           assert m.get('lang') == 'he', "lang חייב להיות he"
           assert m.get('dir') == 'rtl', "dir חייב להיות rtl"
           assert len(m.get('icons', [])) >= 2, "חייבים לפחות 2 אייקונים"
-          print("✅ manifest תקין — RTL, עברית, אייקונים")
+          print("✅ manifest — RTL, עברית, אייקונים")
           EOF
 
       - name: Check API handler
         run: |
           python3 - <<'EOF'
           code = open('api/generate.js').read()
-          checks = {
-            'gemini-1.5-flash': 'מודל gemini-1.5-flash',
-            'GEMINI_API_KEY': 'env var',
-            'export default': 'ES module export',
-            'maxOutputTokens': 'token limit מוגדר',
-          }
-          fail = False
-          for key, label in checks.items():
-            if key in code:
-              print(f"✅ {label}")
-            else:
-              print(f"❌ חסר: {label} ({key})")
-              fail = True
-          if fail:
-            raise SystemExit(1)
+          checks = {'gemini-1.5-flash': 'מודל', 'GEMINI_API_KEY': 'env var', 'export default': 'ES module', 'maxOutputTokens': 'token limit'}
+          fail = any(print(f"❌ {l}") or True for k, l in checks.items() if k not in code)
+          [print(f"✅ {l}") for k, l in checks.items() if k in code]
+          if fail: raise SystemExit(1)
           EOF
 
       - name: Check index.html essentials
         run: |
           python3 - <<'EOF'
           html = open('index.html').read()
-          checks = {
-            'dir="rtl"': 'RTL',
-            '/api/generate': 'fetch endpoint',
-            'sw.js': 'Service Worker',
-            'postai_history_v2': 'localStorage key',
-            'GEN_COOLDOWN_MS': 'debounce מוגדר',
-          }
+          checks = {'dir="rtl"': 'RTL', '/api/generate': 'endpoint', 'sw.js': 'SW', 'postai_history_v2': 'localStorage', 'GEN_COOLDOWN_MS': 'debounce', 'SUGGESTION_POOL': 'suggestion pool', '2026': 'תוכן עדכני'}
           fail = False
-          for key, label in checks.items():
-            if key in html:
-              print(f"✅ {label}")
-            else:
-              print(f"❌ חסר: {label}")
-              fail = True
-          if fail:
-            raise SystemExit(1)
+          for k, l in checks.items():
+            if k in html: print(f"✅ {l}")
+            else: print(f"❌ חסר: {l}"); fail = True
+          if fail: raise SystemExit(1)
           EOF
 
   live-test:
     name: Live API Test
     runs-on: ubuntu-latest
     needs: validate
+    timeout-minutes: 3
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Wait for Vercel deploy
-        run: sleep 45
-
       - name: Test deployed API
         run: |
-          echo "🌐 בודק API בייצור..."
-          STATUS=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+          STATUS=$(curl -s -o /tmp/resp.json -w "%{http_code}" --max-time 20 \
             -X POST https://postai-nine.vercel.app/api/generate \
             -H "Content-Type: application/json" \
             -d '{"topic":"test","platform":"twitter","tone":"professional","length":"short"}')
           echo "Status: $STATUS"
           cat /tmp/resp.json
-          if [ "$STATUS" = "200" ]; then
-            echo "✅ API עובד!"
-          else
-            echo "⚠️ API החזיר $STATUS (ייתכן rate limit — לא נכשל)"
-          fi
+          [ "$STATUS" = "200" ] && echo "✅ API עובד!" || echo "⚠️ $STATUS (rate limit?)"
