@@ -1008,11 +1008,14 @@ const SUGGESTION_POOL = [
 
 function renderSuggestions(items) {
   const list = document.getElementById('suggestions-list');
-  list.innerHTML = items.map(s => `
-    <button class="pill" style="text-align:right;border-radius:var(--radius-sm);padding:10px 14px"
-      onclick="useSuggestion(${JSON.stringify(s.t)})">
-      ${s.e} ${s.t}
-    </button>`).join('');
+  list.innerHTML = items.map(s => {
+    const safe = s.t.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    return `<button class="pill" style="text-align:right;border-radius:var(--radius-sm);padding:10px 14px"
+      data-suggestion="${safe}">${s.e} ${s.t}</button>`;
+  }).join('');
+  list.querySelectorAll('button[data-suggestion]').forEach(btn => {
+    btn.addEventListener('click', () => useSuggestion(btn.dataset.suggestion));
+  });
 }
 
 function refreshSuggestions() {
