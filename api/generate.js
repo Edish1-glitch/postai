@@ -138,7 +138,7 @@ ${formatInstructions[format] || formatInstructions.hook}
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant', // temp: switch back to llama-3.3-70b-versatile tomorrow
+        model: 'mixtral-8x7b-32768',
         messages: [
           {
             role: 'system',
