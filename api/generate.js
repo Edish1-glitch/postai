@@ -43,10 +43,11 @@ export default async function handler(req, res) {
     educational: 'חינוכי, מסביר מורכב בפשטות'
   };
 
+  const minTarget = Math.round(charTarget * 0.85);
   const lengthMap = {
-    short:  `קצר — עד ${charTarget} תווים. משפט פותח חזק + משפט סיכום. ללא ריפוד.`,
-    medium: `בינוני — עד ${charTarget} תווים. פתיחה חזקה + 2-3 משפטי גוף + סיום.`,
-    long:   `ארוך — עד ${charTarget} תווים. נצל כמעט את כל מגבלת הפלטפורמה.`
+    short:  `קצר — בין ${minTarget} ל-${charTarget} תווים. משפט פותח חזק + משפט סיכום. ללא ריפוד.`,
+    medium: `בינוני — בין ${minTarget} ל-${charTarget} תווים. פתיחה חזקה + 2-3 משפטי גוף + סיום.`,
+    long:   `ארוך — בין ${minTarget} ל-${charTarget} תווים. נצל כמעט את כל מגבלת הפלטפורמה.`
   };
 
   const formatInstructions = {
@@ -90,7 +91,7 @@ export default async function handler(req, res) {
 ${formatInstructions[format] || formatInstructions.hook}
 
 חוקי ברזל:
-✅ HARD LIMIT: כל הפוסט (כולל רווחים, שורות חדשות ו-hashtags) חייב להיות עד ${charTarget} תווים — ספור לפני שאתה מסיים
+✅ אורך מחייב: בין ${minTarget} ל-${charTarget} תווים — לא פחות, לא יותר. ספור לפני שאתה מסיים
 ✅ השתמש בנתונים מהידע שלך — סטטיסטיקות אמיתיות ממחקרים וחברות ידועות
 ✅ אם יש מקור לנתון (חברה, דוח, מחקר) — ציין אותו בתוך הפוסט
 ✅ שורה ראשונה — עוצרת גלילה, חייבת להיות חזקה
