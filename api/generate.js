@@ -171,7 +171,7 @@ ${formatInstructions[format] || formatInstructions.hook}
       return res.status(502).json({ error: 'לא התקבלה תשובה מה-AI' });
     }
 
-    let post = text.trim();
+    let post = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     // Server-side hard cap — safety net if model ignores the char limit
     if (post.length > hardLimit) {
       const truncated = post.slice(0, hardLimit);
