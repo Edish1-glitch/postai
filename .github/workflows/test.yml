@@ -47,7 +47,7 @@ jobs:
         run: |
           python3 - <<'EOF'
           code = open('api/generate.js').read()
-          checks = {'mixtral-8x7b-32768': 'מודל', 'GROQ_API_KEY': 'env var', 'export default': 'ES module', 'max_tokens': 'token limit'}
+          checks = {'llama-3.1-70b-versatile': 'מודל', 'GROQ_API_KEY': 'env var', 'export default': 'ES module', 'max_tokens': 'token limit'}
           fail = any(print(f"❌ {l}") or True for k, l in checks.items() if k not in code)
           [print(f"✅ {l}") for k, l in checks.items() if k in code]
           if fail: raise SystemExit(1)
