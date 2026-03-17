@@ -138,7 +138,7 @@ ${formatInstructions[format] || formatInstructions.hook}
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'qwen/qwen3-32b',
         messages: [
           {
             role: 'system',
