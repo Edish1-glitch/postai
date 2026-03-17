@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Mock mode — skip Gemini, return hardcoded post (for dev/CI testing)
+  // Mock mode — skip AI, return hardcoded post (for dev/CI testing)
   if (req.query?.mock === '1') {
     return res.status(200).json({
       post: `73% מהמשקיעים מפסידים כסף בגלל טעות אחת פשוטה 👇\n\nהם מגיבים לרעש — לא לאות.\n\nכל ירידה של 5% נראית להם "קריסה", כל עלייה — "הזדמנות חד-פעמית".\nהתוצאה: קנייה יקר, מכירה זול. שוב ושוב.\n\nהנתון המפחיד: פרמיית ההתנהגות עולה למשקיע הממוצע 1.5% בשנה (מחקר DALBAR 2024).\nעל 30 שנה? זה עשרות אחוזים מהתיק.\n\nהפתרון: כתוב את הסיבות להשקעה לפני שאתה נכנס. בירידה — קרא אותן.\n\n#השקעות #AI #פיננסים`
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'נדרש נושא לפוסט' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'API key חסר בהגדרות השרת' });
   }
@@ -91,52 +91,48 @@ ${formatInstructions[format] || formatInstructions.hook}
 
 חוקי ברזל:
 ✅ HARD LIMIT: כל הפוסט (כולל רווחים, שורות חדשות ו-hashtags) חייב להיות עד ${charTarget} תווים — ספור לפני שאתה מסיים
-✅ חפש נתונים אמיתיים ועדכניים לפני שאתה כותב — השתמש ב-Google Search
-✅ השתמש רק בנתונים שמצאת — אל תמציא סטטיסטיקות
+✅ השתמש בנתונים מהידע שלך — סטטיסטיקות אמיתיות ממחקרים וחברות ידועות
 ✅ אם יש מקור לנתון (חברה, דוח, מחקר) — ציין אותו בתוך הפוסט
 ✅ שורה ראשונה — עוצרת גלילה, חייבת להיות חזקה
 ✅ עברית בלבד, RTL
 ✅ 2-3 hashtags רלוונטיים בסוף
 
-❌ אל תמציא אחוזים או נתונים — רק עובדות מאומתות
+❌ אל תמציא אחוזים או נתונים שאינך בטוח בהם
 ❌ אל תתחיל ב"בעולם של..." / "בעידן ה-AI..." — קלישאה
 ❌ אל תכתוב "חשוב לזכור" / "כדאי לציין" — משעמם
 ❌ אל תוסיף הסברים, הקדמות או מרכאות — רק הפוסט`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ googleSearch: {} }],
-          generationConfig: {
-            temperature: 0.92,
-            maxOutputTokens: 4096,
-            thinkingConfig: { thinkingBudget: 0 }
-          }
-        })
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.92,
+        max_tokens: 1024
+      })
+    });
 
     if (!response.ok) {
       const err = await response.json();
-      console.error('Gemini error:', JSON.stringify(err));
-      const geminiMsg = err?.error?.message || JSON.stringify(err);
-      return res.status(502).json({ error: `Gemini: ${geminiMsg}` });
+      console.error('Groq error:', JSON.stringify(err));
+      const msg = err?.error?.message || JSON.stringify(err);
+      return res.status(502).json({ error: `שגיאת AI: ${msg}` });
     }
 
     const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = data?.choices?.[0]?.message?.content;
 
     if (!text) {
       return res.status(502).json({ error: 'לא התקבלה תשובה מה-AI' });
     }
 
     let post = text.trim();
-    // Server-side hard cap — safety net if Gemini ignores the char limit
+    // Server-side hard cap — safety net if model ignores the char limit
     if (post.length > hardLimit) {
       const truncated = post.slice(0, hardLimit);
       const lastBreak = Math.max(
