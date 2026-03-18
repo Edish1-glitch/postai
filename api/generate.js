@@ -138,7 +138,7 @@ ${formatInstructions[format] || formatInstructions.hook}
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gemma2-9b-it',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'system',
