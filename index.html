@@ -615,6 +615,21 @@
     .btn-push:hover { opacity: .85; }
     .btn-push:disabled { opacity: .4; cursor: not-allowed; }
 
+    .btn-connect-x {
+      width: 100%;
+      background: #000;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity var(--transition);
+    }
+    .btn-connect-x:hover { opacity: .85; }
+
     .btn-test-push {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -630,6 +645,33 @@
     }
 
     .btn-test-push:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 10000;
+    }
+    .modal-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      width: min(340px, 92vw);
+      z-index: 10001;
+      direction: rtl;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
 
     /* ── Toast ───────────────────────────────────────────────────────────── */
     #toast {
@@ -844,6 +886,53 @@
       </div>
     </div>
 
+    <div class="card" id="x-connect-card">
+      <div class="card-title">𝕏 פרסום ל-X (Twitter)</div>
+      <div id="x-status-box">
+        <div id="x-connected" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <span style="font-size:22px">✅</span>
+            <div>
+              <div style="font-weight:600" id="x-username-display"></div>
+              <div style="font-size:12px;color:var(--text-muted)">מחובר לחשבון X</div>
+            </div>
+            <button class="btn-sm danger" style="margin-right:auto" onclick="disconnectX()">התנתק</button>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+              <span>שימוש חודשי</span>
+              <span id="x-usage-text">0 / 500</span>
+            </div>
+            <div style="background:var(--border);border-radius:6px;height:8px;overflow:hidden">
+              <div id="x-usage-bar" style="background:var(--accent);height:100%;width:0%;transition:width .3s;border-radius:6px"></div>
+            </div>
+            <div id="x-usage-warning" style="display:none;color:#f59e0b;font-size:12px;margin-top:6px">⚠️ קרוב למגבלה החודשית</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+            <span>מקסימום פרסומים ביום</span>
+            <div style="display:flex;gap:6px" id="daily-limit-btns">
+              <button class="filter-pill" data-limit="1" onclick="setXDailyLimit(1,this)">1</button>
+              <button class="filter-pill active" data-limit="3" onclick="setXDailyLimit(3,this)">3</button>
+              <button class="filter-pill" data-limit="5" onclick="setXDailyLimit(5,this)">5</button>
+              <button class="filter-pill" data-limit="10" onclick="setXDailyLimit(10,this)">10</button>
+            </div>
+          </div>
+        </div>
+        <div id="x-disconnected">
+          <div style="color:var(--text-muted);font-size:13px;margin-bottom:14px;line-height:1.6">
+            חבר את חשבון X שלך כדי לפרסם אוטומטית.<br>
+            <span style="font-size:12px">מגבלה חינמית: 500 פרסומים/חודש</span>
+          </div>
+          <button class="btn-connect-x" onclick="connectX()">🐦 התחבר לחשבון X</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="x-queue-card" style="display:none">
+      <div class="card-title">📅 פרסומים מתוזמנים</div>
+      <div id="x-queue-list"></div>
+    </div>
+
     <div class="card">
       <div class="card-title">נתונים</div>
       <div class="setting-row">
@@ -859,7 +948,7 @@
       <div class="card-title">אודות</div>
       <div style="color:var(--text-muted); font-size:14px; line-height:1.8">
         <div>PostAI v2.0</div>
-        <div>Powered by Gemini 2.0 Flash</div>
+        <div>Powered by Llama 3.3 70B (Groq)</div>
         <div>בנוי עם ❤️ בעברית</div>
       </div>
     </div>
@@ -903,7 +992,7 @@ function showTab(name) {
   document.getElementById(`tab-${name}`)?.classList.add('active');
 
   if (name === 'history') renderHistory();
-  if (name === 'settings') { renderPushStatus(); updateStorageInfo(); }
+  if (name === 'settings') { renderPushStatus(); updateStorageInfo(); renderXStatus(); }
 }
 
 // Init create section visibility
@@ -1284,6 +1373,7 @@ function renderHistory() {
         <button class="btn-sm star ${entry.starred ? 'active' : ''}" onclick="toggleStar('${entry.id}')">
           ${entry.starred ? '⭐' : '☆'} כוכב
         </button>
+        ${getXAuth() ? `<button class="btn-sm" onclick="schedulePost(${entry.id})">⏰ תזמן</button>` : ''}
         <button class="btn-sm danger" onclick="deletePost('${entry.id}')">🗑</button>
       </div>
     </div>`;
@@ -1510,6 +1600,386 @@ if (localStorage.getItem('postai_daily_reminder') === 'true' &&
     Notification.permission === 'granted') {
   scheduleDailyReminder();
 }
+
+// ═══════════════════════════════════════════════════════════════
+// X (TWITTER) OAUTH + POSTING
+// ═══════════════════════════════════════════════════════════════
+const X_STORAGE = {
+  AUTH:     'postai_x_auth',
+  USAGE:    'postai_x_usage',
+  SETTINGS: 'postai_x_settings',
+  QUEUE:    'postai_x_queue',
+};
+
+function getXAuth()     { try { return JSON.parse(localStorage.getItem(X_STORAGE.AUTH)) || null; } catch { return null; } }
+function getXUsage()    { try { return JSON.parse(localStorage.getItem(X_STORAGE.USAGE)) || { month: '', count: 0 }; } catch { return { month: '', count: 0 }; } }
+function getXSettings() { try { return JSON.parse(localStorage.getItem(X_STORAGE.SETTINGS)) || { dailyLimit: 3 }; } catch { return { dailyLimit: 3 }; } }
+function getXQueue()    { try { return JSON.parse(localStorage.getItem(X_STORAGE.QUEUE)) || []; } catch { return []; } }
+
+function saveXAuth(data)     { localStorage.setItem(X_STORAGE.AUTH, JSON.stringify(data)); }
+function saveXUsage(data)    { localStorage.setItem(X_STORAGE.USAGE, JSON.stringify(data)); }
+function saveXSettings(data) { localStorage.setItem(X_STORAGE.SETTINGS, JSON.stringify(data)); }
+function saveXQueue(data)    { localStorage.setItem(X_STORAGE.QUEUE, JSON.stringify(data)); }
+
+// PKCE helpers
+function generateCodeVerifier() {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function generateCodeChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function connectX() {
+  const verifier  = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('x_code_verifier', verifier);
+
+  const clientId   = window.__X_CLIENT_ID__ || 'REPLACE_WITH_CLIENT_ID';
+  const redirectUri = location.origin;
+  const scope = 'tweet.write tweet.read users.read offline.access';
+  const state  = Math.random().toString(36).slice(2);
+  sessionStorage.setItem('x_oauth_state', state);
+
+  const url = `https://twitter.com/i/oauth2/authorize?` +
+    `response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&scope=${encodeURIComponent(scope)}&state=${state}&code_challenge=${challenge}&code_challenge_method=S256`;
+
+  location.href = url;
+}
+
+async function handleXCallback() {
+  const params   = new URLSearchParams(location.search);
+  const code     = params.get('code');
+  const state    = params.get('state');
+  if (!code) return;
+
+  // Clean URL without reload
+  history.replaceState({}, '', location.pathname);
+
+  if (state !== sessionStorage.getItem('x_oauth_state')) {
+    toast('❌ שגיאת אבטחה ב-OAuth'); return;
+  }
+
+  const verifier = sessionStorage.getItem('x_code_verifier');
+  toast('🔄 מתחבר לחשבון X...');
+
+  try {
+    const res = await fetch('/api/auth-x-callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, code_verifier: verifier, redirect_uri: location.origin })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    saveXAuth({ access_token: data.access_token, refresh_token: data.refresh_token, username: data.username, expires_at: Date.now() + data.expires_in * 1000 });
+    toast(`✅ מחובר כ-@${data.username}!`);
+    renderXStatus();
+    showTab('settings');
+  } catch (e) {
+    toast('❌ חיבור ל-X נכשל: ' + e.message);
+  }
+}
+
+function disconnectX() {
+  if (!confirm('להתנתק מחשבון X?')) return;
+  localStorage.removeItem(X_STORAGE.AUTH);
+  renderXStatus();
+  toast('✅ התנתקת מ-X');
+}
+
+function setXDailyLimit(limit, btn) {
+  const settings = getXSettings();
+  settings.dailyLimit = limit;
+  saveXSettings(settings);
+  document.querySelectorAll('#daily-limit-btns .filter-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function getXMonthlyUsage() {
+  const usage = getXUsage();
+  const month = new Date().toISOString().slice(0, 7); // "2026-03"
+  if (usage.month !== month) return { month, count: 0 }; // auto-reset
+  return usage;
+}
+
+function incrementXUsage() {
+  const usage = getXMonthlyUsage();
+  usage.count++;
+  saveXUsage(usage);
+  renderXStatus();
+}
+
+function renderXStatus() {
+  const auth     = getXAuth();
+  const connected = document.getElementById('x-connected');
+  const disconnected = document.getElementById('x-disconnected');
+  if (!connected) return;
+
+  renderXQueue();
+
+  if (auth) {
+    connected.style.display = 'block';
+    disconnected.style.display = 'none';
+    document.getElementById('x-username-display').textContent = `@${auth.username}`;
+
+    const usage   = getXMonthlyUsage();
+    const pct     = Math.min(100, Math.round(usage.count / 500 * 100));
+    document.getElementById('x-usage-text').textContent = `${usage.count} / 500`;
+    document.getElementById('x-usage-bar').style.width = pct + '%';
+    document.getElementById('x-usage-bar').style.background = pct >= 90 ? '#f59e0b' : 'var(--accent)';
+    document.getElementById('x-usage-warning').style.display = pct >= 90 ? 'block' : 'none';
+
+    const settings = getXSettings();
+    document.querySelectorAll('#daily-limit-btns .filter-pill').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.limit) === settings.dailyLimit);
+    });
+  } else {
+    connected.style.display = 'none';
+    disconnected.style.display = 'block';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// X — SCHEDULE + QUEUE + POST
+// ═══════════════════════════════════════════════════════════════
+function schedulePost(historyId) {
+  const entry = getHistory().find(h => h.id == historyId);
+  if (!entry) return;
+
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 5);
+  const defaultVal = now.toISOString().slice(0, 16); // datetime-local format
+
+  const modal = document.createElement('div');
+  modal.id = 'schedule-modal';
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeScheduleModal()"></div>
+    <div class="modal-box">
+      <div class="modal-title">⏰ תזמן פרסום ל-𝕏</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">
+        ${entry.post.slice(0, 80)}${entry.post.length > 80 ? '...' : ''}
+      </div>
+      <input type="datetime-local" id="schedule-dt" value="${defaultVal}"
+        style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);
+               border-radius:var(--radius-sm);color:var(--text);font-size:14px;margin-bottom:14px;
+               font-family:inherit" />
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm" style="flex:1;padding:10px;background:var(--accent);color:#fff;border-color:transparent"
+          onclick="confirmSchedule(${historyId})">✅ תזמן</button>
+        <button class="btn-sm danger" style="flex:1;padding:10px" onclick="closeScheduleModal()">ביטול</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function closeScheduleModal() {
+  const m = document.getElementById('schedule-modal');
+  if (m) m.remove();
+}
+
+function confirmSchedule(historyId) {
+  const dt = document.getElementById('schedule-dt')?.value;
+  if (!dt) { toast('⚠️ בחר תאריך ושעה'); return; }
+
+  const scheduledAt = new Date(dt).toISOString();
+  if (new Date(scheduledAt) <= new Date()) { toast('⚠️ הזמן כבר עבר'); return; }
+
+  const entry = getHistory().find(h => h.id == historyId);
+  if (!entry) return;
+
+  const queue = getXQueue();
+  queue.push({ id: Date.now(), historyId: entry.id, text: entry.post, scheduledAt, posted: false });
+  saveXQueue(queue);
+  closeScheduleModal();
+  renderXQueue();
+  toast('⏰ פוסט תוזמן בהצלחה!');
+}
+
+function cancelScheduled(queueId) {
+  const queue = getXQueue().filter(q => q.id != queueId);
+  saveXQueue(queue);
+  renderXQueue();
+  toast('❌ תזמון בוטל');
+}
+
+function renderXQueue() {
+  const card = document.getElementById('x-queue-card');
+  const container = document.getElementById('x-queue-list');
+  if (!container) return;
+
+  const queue = getXQueue().filter(q => !q.posted);
+
+  if (!getXAuth() || queue.length === 0) {
+    if (card) card.style.display = 'none';
+    return;
+  }
+
+  if (card) card.style.display = 'block';
+
+  container.innerHTML = queue.map(q => {
+    const dt = new Date(q.scheduledAt);
+    const dtStr = dt.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) + ' ' +
+                  dt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    const preview = q.text.slice(0, 60) + (q.text.length > 60 ? '...' : '');
+    const isPast = dt <= new Date();
+    return `
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px">
+      <div style="font-size:12px;color:${isPast ? 'var(--warning)' : 'var(--accent)'};margin-bottom:4px">
+        ${isPast ? '⚡' : '📅'} ${dtStr}${isPast ? ' — ממתין לאישור' : ''}
+      </div>
+      <div style="font-size:13px;margin-bottom:8px">${preview}</div>
+      <div style="display:flex;gap:6px">
+        ${isPast ? `<button class="btn-sm" style="background:var(--accent);color:#fff;border-color:transparent" onclick="autoPostQueued(${q.id})">🐦 פרסם</button>` : ''}
+        <button class="btn-sm danger" onclick="cancelScheduled(${q.id})">❌ בטל</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function dismissQueued(queueId) {
+  const m = document.getElementById('post-confirm-modal');
+  if (m) m.remove();
+  const queue = getXQueue();
+  const item = queue.find(q => q.id == queueId);
+  if (item) item.dismissed = true;
+  saveXQueue(queue);
+  renderXQueue();
+  toast('⏰ פרסום נדחה');
+}
+
+async function autoPostQueued(queueId) {
+  const m = document.getElementById('post-confirm-modal');
+  if (m) m.remove();
+  history.replaceState({}, '', location.pathname);
+
+  const queue = getXQueue();
+  const item = queue.find(q => q.id == queueId);
+  if (!item || item.posted) return;
+
+  toast('🐦 מפרסם...');
+  await postToX(item);
+}
+
+async function postToX(queueItem) {
+  let auth = getXAuth();
+  if (!auth) { toast('❌ לא מחובר ל-X'); return; }
+
+  // Refresh token if near expiry
+  if (auth.expires_at && Date.now() > auth.expires_at - 60000) {
+    try {
+      const r = await fetch('/api/refresh-x-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: auth.refresh_token })
+      });
+      const d = await r.json();
+      if (!d.error) {
+        auth = { ...auth, access_token: d.access_token, refresh_token: d.refresh_token,
+                 expires_at: Date.now() + d.expires_in * 1000 };
+        saveXAuth(auth);
+      }
+    } catch(e) { /* continue with existing token */ }
+  }
+
+  try {
+    const res = await fetch('/api/post-to-x', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: queueItem.text, access_token: auth.access_token })
+    });
+    const data = await res.json();
+
+    if (data.error) { toast('❌ שגיאת פרסום: ' + data.error); return; }
+
+    // Mark as posted
+    const queue = getXQueue();
+    const item = queue.find(q => q.id == queueItem.id);
+    if (item) { item.posted = true; item.postedUrl = data.url; }
+    saveXQueue(queue);
+    incrementXUsage();
+    renderXQueue();
+
+    toast('✅ פורסם ב-X!');
+    // Open tweet URL
+    if (data.url) setTimeout(() => window.open(data.url, '_blank'), 1500);
+  } catch(e) {
+    toast('❌ שגיאת רשת בפרסום ל-X');
+  }
+}
+
+async function checkXQueue() {
+  const auth = getXAuth();
+  if (!auth) return;
+
+  const now = new Date();
+  const queue = getXQueue();
+  const due = queue.filter(q => !q.posted && !q.dismissed && new Date(q.scheduledAt) <= now);
+  if (!due.length) return;
+
+  for (const item of due) {
+    if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+      // Show SW notification with post action
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification('PostAI — הגיע זמן הפרסום! 𝕏', {
+          body: item.text.slice(0, 100),
+          icon: '/icons/icon-192.png',
+          dir: 'rtl',
+          lang: 'he',
+          tag: `xpost-${item.id}`,
+          renotify: false,
+          actions: [
+            { action: 'post-to-x', title: '🐦 פרסם' },
+            { action: 'dismiss',   title: 'דחה' }
+          ],
+          data: { queueId: item.id }
+        });
+      });
+    } else {
+      // Page is in foreground — show inline confirmation
+      if (!document.getElementById('post-confirm-modal')) {
+        const modal = document.createElement('div');
+        modal.id = 'post-confirm-modal';
+        modal.innerHTML = `
+          <div class="modal-overlay"></div>
+          <div class="modal-box">
+            <div class="modal-title">⏰ הגיע זמן הפרסום!</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">
+              ${item.text.slice(0, 120)}${item.text.length > 120 ? '...' : ''}
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sm" style="flex:1;padding:10px;background:var(--accent);color:#fff;border-color:transparent"
+                onclick="autoPostQueued(${item.id})">🐦 פרסם עכשיו</button>
+              <button class="btn-sm danger" style="flex:1;padding:10px"
+                onclick="dismissQueued(${item.id})">דחה</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+      }
+    }
+  }
+}
+
+// Check queue every 60s and on page focus
+setInterval(checkXQueue, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkXQueue(); });
+
+// On load — handle OAuth callback or auto-post trigger
+const _urlParams = new URLSearchParams(location.search);
+const _autopostId = _urlParams.get('autopost');
+if (_autopostId) {
+  history.replaceState({}, '', location.pathname);
+  window.addEventListener('load', () => autoPostQueued(_autopostId));
+} else if (location.search.includes('code=')) {
+  handleXCallback();
+}
+
+// Initial queue check
+checkXQueue();
 </script>
 </body>
 </html>

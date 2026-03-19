@@ -88,12 +88,17 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   if (event.action === 'dismiss') return;
 
-  const url = event.notification.data?.url || '/';
+  const queueId = event.notification.data?.queueId;
+  const target  = queueId ? `/?autopost=${queueId}` : (event.notification.data?.url || '/');
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       const existing = clientList.find((c) => c.url.includes(self.location.origin));
-      if (existing) return existing.focus();
-      return clients.openWindow(url);
+      if (existing) {
+        existing.focus();
+        return existing.navigate ? existing.navigate(target) : clients.openWindow(target);
+      }
+      return clients.openWindow(target);
     })
   );
 });
