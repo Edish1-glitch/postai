@@ -1634,33 +1634,44 @@ async function generateCodeChallenge(verifier) {
 }
 
 async function connectX() {
-  const verifier  = generateCodeVerifier();
-  const challenge = await generateCodeChallenge(verifier);
+  // Fetch clientId from server env — avoids hardcoding
+  let clientId;
+  try {
+    const cfg = await fetch('/api/x-config').then(r => r.json());
+    clientId = cfg.clientId;
+  } catch(e) { /* network error */ }
+
+  if (!clientId) {
+    toast('❌ TWITTER_CLIENT_ID לא מוגדר — הוסף ב-Vercel ו-Redeploy');
+    return;
+  }
+
+  const verifier    = generateCodeVerifier();
+  const challenge   = await generateCodeChallenge(verifier);
   sessionStorage.setItem('x_code_verifier', verifier);
 
-  const clientId   = window.__X_CLIENT_ID__ || 'REPLACE_WITH_CLIENT_ID';
-  const redirectUri = location.origin;
-  const scope = 'tweet.write tweet.read users.read offline.access';
-  const state  = Math.random().toString(36).slice(2);
-  sessionStorage.setItem('x_oauth_state', state);
+  const redirectUri  = location.origin;
+  const scope        = 'tweet.write tweet.read users.read offline.access';
+  const oauthState   = Math.random().toString(36).slice(2);
+  sessionStorage.setItem('x_oauth_state', oauthState);
 
   const url = `https://twitter.com/i/oauth2/authorize?` +
     `response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent(scope)}&state=${state}&code_challenge=${challenge}&code_challenge_method=S256`;
+    `&scope=${encodeURIComponent(scope)}&state=${oauthState}&code_challenge=${challenge}&code_challenge_method=S256`;
 
   location.href = url;
 }
 
 async function handleXCallback() {
-  const params   = new URLSearchParams(location.search);
-  const code     = params.get('code');
-  const state    = params.get('state');
+  const params      = new URLSearchParams(location.search);
+  const code        = params.get('code');
+  const returnState = params.get('state');
   if (!code) return;
 
   // Clean URL without reload
   history.replaceState({}, '', location.pathname);
 
-  if (state !== sessionStorage.getItem('x_oauth_state')) {
+  if (returnState !== sessionStorage.getItem('x_oauth_state')) {
     toast('❌ שגיאת אבטחה ב-OAuth'); return;
   }
 
