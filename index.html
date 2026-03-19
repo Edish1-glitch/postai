@@ -391,8 +391,43 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
+    .history-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filter-pills { display: flex; gap: 6px; }
+    .filter-pill {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .filter-pill.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .history-search {
+      flex: 1;
+      min-width: 120px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      color: var(--text);
+      font-size: 13px;
+      direction: rtl;
+    }
+    .history-search:focus { outline: none; border-color: var(--accent); }
 
     .history-title { font-size: 16px; font-weight: 700; }
 
@@ -768,6 +803,16 @@
       <span class="history-title">📋 פוסטים שמורים</span>
       <button class="btn-clear-all" onclick="clearAllHistory()">מחק הכל</button>
     </div>
+    <div class="history-filter-bar">
+      <div class="filter-pills">
+        <button class="filter-pill active" data-filter="all" onclick="setHistoryFilter('platform','all',this)">כולם</button>
+        <button class="filter-pill" data-filter="starred" onclick="setHistoryFilter('starred',true,this)">⭐</button>
+        <button class="filter-pill" data-filter="twitter" onclick="setHistoryFilter('platform','twitter',this)">𝕏</button>
+        <button class="filter-pill" data-filter="threads" onclick="setHistoryFilter('platform','threads',this)">🧵</button>
+        <button class="filter-pill" data-filter="linkedin" onclick="setHistoryFilter('platform','linkedin',this)">💼</button>
+      </div>
+      <input class="history-search" type="search" placeholder="🔍 חיפוש..." oninput="setHistorySearch(this.value)" />
+    </div>
     <div id="history-list"></div>
   </div>
 
@@ -839,6 +884,8 @@ const state = {
 
 const PLATFORM_LIMITS = { twitter: 280, threads: 500, linkedin: 700 };
 const STORAGE_KEY = 'postai_history_v2';
+
+let historyFilter = { platform: 'all', starred: false, search: '' };
 
 // ═══════════════════════════════════════════════════════════════
 // TABS
@@ -1171,17 +1218,46 @@ function savePost() {
   toast('🔖 הפוסט נשמר בהיסטוריה!');
 }
 
+function setHistoryFilter(type, value, btn) {
+  if (type === 'starred') {
+    historyFilter.starred = !historyFilter.starred;
+    historyFilter.platform = 'all';
+    btn.classList.toggle('active', historyFilter.starred);
+    document.querySelectorAll('.filter-pill[data-filter]:not([data-filter="starred"])').forEach(b => b.classList.remove('active'));
+    if (historyFilter.starred) return renderHistory();
+    // unstar — activate "all"
+    document.querySelector('.filter-pill[data-filter="all"]').classList.add('active');
+  } else {
+    historyFilter.platform = value;
+    historyFilter.starred = false;
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  renderHistory();
+}
+
+function setHistorySearch(val) {
+  historyFilter.search = val.trim().toLowerCase();
+  renderHistory();
+}
+
 function renderHistory() {
   const list = document.getElementById('history-list');
-  const history = getHistory();
+  let history = getHistory();
+
+  // Apply filters
+  if (historyFilter.starred) history = history.filter(e => e.starred);
+  if (historyFilter.platform !== 'all') history = history.filter(e => e.platform === historyFilter.platform);
+  if (historyFilter.search) history = history.filter(e => e.post.toLowerCase().includes(historyFilter.search));
 
   if (history.length === 0) {
+    const isFiltered = historyFilter.starred || historyFilter.platform !== 'all' || historyFilter.search;
     list.innerHTML = `
       <div class="history-empty">
-        <div class="empty-icon">📭</div>
-        <div>אין פוסטים שמורים עדיין</div>
+        <div class="empty-icon">${isFiltered ? '🔍' : '📭'}</div>
+        <div>${isFiltered ? 'אין תוצאות לסינון זה' : 'אין פוסטים שמורים עדיין'}</div>
         <div style="font-size:13px;margin-top:8px;color:var(--text-muted)">
-          צור פוסט ולחץ "שמור"
+          ${isFiltered ? 'נסה סינון אחר' : 'צור פוסט ולחץ "שמור"'}
         </div>
       </div>`;
     return;
