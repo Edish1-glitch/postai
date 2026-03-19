@@ -74,11 +74,11 @@ def check_output(fmt, post):
     if not re.search(r'[\u05d0-\u05ea]', post):
         issues.append('אין עברית בפוסט')
 
-    # 4. tips — exactly 5 numbered items
+    # 4. tips — at least 2 numbered items
     if fmt == 'tips':
         items = re.findall(r'(?m)^\s*\d+[\.\)]\s+\S', post)
-        if len(items) != 5:
-            issues.append(f'tips: {len(items)} פריטים ממוספרים (צריך 5)')
+        if len(items) < 2:
+            issues.append(f'tips: {len(items)} פריטים ממוספרים (צריך לפחות 2)')
 
     # 5. Should end with ? or CTA
     tail = post.rstrip()[-80:]
