@@ -65,19 +65,13 @@ jobs:
           if fail: raise SystemExit(1)
           EOF
 
-  live-test:
-    name: Live API Test
+  matrix-test:
+    name: Matrix Test (Mock)
     runs-on: ubuntu-latest
     needs: validate
-    timeout-minutes: 3
+    timeout-minutes: 5
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Test deployed API
-        run: |
-          STATUS=$(curl -s -o /tmp/resp.json -w "%{http_code}" --max-time 20 \
-            -X POST "https://postai-nine.vercel.app/api/generate?mock=1" \
-            -H "Content-Type: application/json" \
-            -d '{"topic":"test","platform":"twitter","tone":"professional","length":"short"}')
-          echo "Status: $STATUS"
-          cat /tmp/resp.json
-          [ "$STATUS" = "200" ] && echo "✅ API עובד!" || echo "⚠️ $STATUS (rate limit?)"
+      - uses: actions/checkout@v4
+      - name: Run matrix — all tone × format combos (mock, no quota)
+        run: python3 tests/matrix.py --url https://postai-nine.vercel.app
