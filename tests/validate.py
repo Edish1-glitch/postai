@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PostAI — Automated validation tests
+PostAI — Static validation (no API calls)
 Runs on every push via GitHub Actions
 """
 import json, os, sys, re
@@ -8,7 +8,7 @@ import json, os, sys, re
 errors = []
 warnings = []
 
-def ok(msg): print(f"  ✅ {msg}")
+def ok(msg):   print(f"  ✅ {msg}")
 def fail(msg): errors.append(msg); print(f"  ❌ {msg}")
 def warn(msg): warnings.append(msg); print(f"  ⚠️  {msg}")
 
@@ -28,7 +28,7 @@ print("\n📋 תקינות JSON:")
 for jf in ['manifest.json', 'vercel.json', 'package.json']:
     if not os.path.exists(jf): continue
     try:
-        data = json.load(open(jf))
+        json.load(open(jf))
         ok(f"{jf} — JSON תקין")
     except json.JSONDecodeError as e:
         fail(f"{jf} — JSON שגוי: {e}")
@@ -56,34 +56,35 @@ if os.path.exists('vercel.json'):
 print("\n🔌 בדיקת api/generate.js:")
 if os.path.exists('api/generate.js'):
     api = open('api/generate.js').read()
-    if 'GEMINI_API_KEY' in api: ok("משתמש ב-env var GEMINI_API_KEY")
-    else: fail("לא נמצא GEMINI_API_KEY")
+    if 'GROQ_API_KEY' in api: ok("משתמש ב-env var GROQ_API_KEY")
+    else: fail("לא נמצא GROQ_API_KEY")
     if 'export default' in api: ok("ES module export")
     else: fail("חסר export default")
-    if 'POST' in api: ok("בדיקת POST method")
-    else: warn("לא נמצאת בדיקת method")
-    if 'maxOutputTokens' in api:
-        match = re.search(r'maxOutputTokens:\s*(\d+)', api)
+    if 'llama-3.3-70b-versatile' in api: ok("מודל: llama-3.3-70b-versatile")
+    else: fail("מודל llama-3.3-70b-versatile לא נמצא")
+    if 'max_tokens' in api:
+        match = re.search(r'max_tokens:\s*(\d+)', api)
         if match:
             tokens = int(match.group(1))
-            if tokens >= 1024: ok(f"maxOutputTokens={tokens} ✓")
-            else: fail(f"maxOutputTokens={tokens} — נמוך מדי! (מינימום 1024)")
-    if 'thinkingBudget' in api: ok("thinkingBudget מוגדר (ללא thinking tokens)")
-    else: warn("thinkingBudget לא מוגדר — עלול לחתוך פוסטים")
-    model_match = re.search(r'models/([\w\-\.]+):generateContent', api)
-    if model_match: ok(f"מודל: {model_match.group(1)}")
-    else: fail("לא נמצא שם מודל ב-API URL")
+            if tokens >= 1024: ok(f"max_tokens={tokens} ✓")
+            else: fail(f"max_tokens={tokens} — נמוך מדי!")
+    if 'mock' in api: ok("mock mode קיים")
+    else: warn("mock mode לא נמצא")
+    if '<think>' in api or 'think>' in api: ok("סינון <think> tags קיים")
+    else: warn("סינון <think> tags לא נמצא")
 
 # ─── 6. INDEX.HTML ────────────────────────────────────────────────
 print("\n🌐 בדיקת index.html:")
 if os.path.exists('index.html'):
     html = open('index.html').read()
     checks = [
-        ('dir="rtl"', "RTL"),
-        ('/api/generate', "fetch /api/generate"),
-        ('sw.js', "Service Worker"),
-        ('manifest.json', "manifest link"),
-        ('postai_history_v2', "localStorage key"),
+        ('dir="rtl"',        "RTL"),
+        ('/api/generate',    "fetch /api/generate"),
+        ('sw.js',            "Service Worker"),
+        ('manifest.json',    "manifest link"),
+        ('postai_history_v2', 'localStorage key'),
+        ('SUGGESTION_POOL',  "suggestion pool"),
+        ('GEN_COOLDOWN_MS',  "debounce"),
     ]
     for pattern, label in checks:
         if pattern in html: ok(label)
