@@ -27,7 +27,10 @@ export default async function handler(req, res) {
   });
 
   const tokens = await tokenRes.json();
-  if (tokens.error) return res.status(400).json({ error: tokens.error_description || tokens.error });
+  if (tokens.error) return res.status(400).json({
+    error: tokens.error_description || tokens.error,
+    _debug: { xError: tokens.error, xDesc: tokens.error_description, status: tokenRes.status }
+  });
 
   // Fetch username
   const userRes = await fetch('https://api.twitter.com/2/users/me', {
