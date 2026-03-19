@@ -4,19 +4,22 @@ export default async function handler(req, res) {
   const { code, code_verifier, redirect_uri } = req.body;
   if (!code || !code_verifier) return res.status(400).json({ error: 'Missing code or code_verifier' });
 
-  const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientId     = process.env.TWITTER_CLIENT_ID;
+  const clientSecret = process.env.TWITTER_CLIENT_SECRET || '';
   if (!clientId) return res.status(500).json({ error: 'TWITTER_CLIENT_ID not configured' });
+
+  // Web App (confidential client) requires Basic Auth header: base64(clientId:clientSecret)
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
   // Exchange code for tokens
   const tokenRes = await fetch('https://api.twitter.com/2/oauth2/token', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      // PKCE public client — no client secret needed
+      'Content-Type':  'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${basicAuth}`,
     },
     body: new URLSearchParams({
       grant_type:    'authorization_code',
-      client_id:     clientId,
       code,
       redirect_uri,
       code_verifier,
