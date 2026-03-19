@@ -45,8 +45,8 @@ export default async function handler(req, res) {
 
   const minTarget = Math.round(charTarget * 0.85);
   const lengthMap = {
-    short:  `קצר — בין ${minTarget} ל-${charTarget} תווים. משפט פותח חזק + משפט סיכום. ללא ריפוד.`,
-    medium: `בינוני — בין ${minTarget} ל-${charTarget} תווים. פתיחה חזקה + 2-3 משפטי גוף + סיום.`,
+    short:  `קצר — חייב להיות בין ${minTarget} ל-${charTarget} תווים. משפט פותח חזק + משפט סיכום. אם כתבת פחות מ-${minTarget} תווים — הוסף פרט או נתון.`,
+    medium: `בינוני — חייב להיות בין ${minTarget} ל-${charTarget} תווים. פתיחה חזקה + 2-3 משפטי גוף + סיום. אם כתבת פחות מ-${minTarget} תווים — הרחב עם דוגמה או נתון נוסף.`,
     long:   `ארוך — חייב להיות בין ${minTarget} ל-${charTarget} תווים. מלא כמעט את כל המקום — הוסף פרטים, דוגמאות, הסברים. אל תשאיר מקום ריק. חובה לסיים עם הנעה לפעולה או שאלה לדיון.`
   };
 

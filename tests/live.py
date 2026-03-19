@@ -50,7 +50,7 @@ TESTS = [
     ("twitter",  "medium", "hook",     "AI ופיננסים 2026"),
     ("threads",  "short",  "datadrop", "בינה מלאכותית בשוק ההון"),
     ("linkedin", "medium", "tips",     "השקעות חכמות עם AI"),
-    ("twitter",  "long",   "story",    "טעות שעלתה לי ביוקר בשוק"),
+    ("linkedin", "long",   "story",    "טעות שעלתה לי ביוקר בשוק"),
     ("threads",  "medium", "hottake",  "AI מחליף את המנהל הפיננסי"),
 ]
 
