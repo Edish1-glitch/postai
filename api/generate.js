@@ -16,9 +16,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'נדרש נושא לפוסט' });
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API key חסר בהגדרות השרת' });
+  // At least one provider must be configured
+  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'לא הוגדר API key — הוסף GROQ_API_KEY או GEMINI_API_KEY' });
   }
 
   const platformLimits = { twitter: 280, threads: 500, linkedin: 700 };
@@ -128,48 +128,17 @@ ${formatInstructions[format] || formatInstructions.hook}
 ❌ אל תכתוב "חשוב לזכור" / "כדאי לציין" — משעמם
 ❌ אל תוסיף הסברים, הקדמות או מרכאות — רק הפוסט`;
 
-  try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: `אתה כותב תוכן עברי לרשתות חברתיות. כללים שאסור לשבור:
+  const systemPrompt = `אתה כותב תוכן עברי לרשתות חברתיות. כללים שאסור לשבור:
 1. כתוב רק עברית — אפשר מילות מפתח באנגלית (שמות חברות, מושגים), אבל כל המשפטים בעברית.
 2. אסור לחרוג מ-${hardLimit} תווים כולל הכל.
 3. כתוב את כל הפסקאות הנדרשות ברצף — ללא כותרות, תוויות בסוגריים, או סימנים מיוחדים לפני פסקה.
 4. אם ברשימה ממוספרת כתבת את הסעיף האחרון — חובה לסיים את הסעיף המלא לפני הוספת hashtags.
-5. בפוסט ארוך (long): חובה להגיע לפחות ${minTarget} תווים — אם קצר מזה, הוסף פרט, נתון, או הרחבה.`
-          },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.92,
-        max_tokens: 1024
-      })
-    });
+5. בפוסט ארוך (long): חובה להגיע לפחות ${minTarget} תווים — אם קצר מזה, הוסף פרט, נתון, או הרחבה.`;
 
-    if (!response.ok) {
-      const err = await response.json();
-      console.error('Groq error:', JSON.stringify(err));
-      const msg = err?.error?.message || JSON.stringify(err);
-      return res.status(502).json({ error: `שגיאת AI: ${msg}` });
-    }
-
-    const data = await response.json();
-    const text = data?.choices?.[0]?.message?.content;
-
-    if (!text) {
-      return res.status(502).json({ error: 'לא התקבלה תשובה מה-AI' });
-    }
-
+  // ── Helper: clean raw model text → final post ─────────────────────────────
+  function cleanPost(text) {
     let post = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-    // Strip leaked section labels (format guide instructions the model included in output)
+    // Strip leaked section labels
     post = post.replace(/\[פסקה \d+[^\]]*\]\s*/g, '').replace(/\[hashtags\]\s*/g, '').trim();
     // Server-side hard cap — safety net if model ignores the char limit
     if (post.length > hardLimit) {
@@ -184,7 +153,119 @@ ${formatInstructions[format] || formatInstructions.hook}
         ? post.slice(0, lastBreak + 1)
         : truncated.slice(0, truncated.lastIndexOf(' '));
     }
-    return res.status(200).json({ post });
+    return post;
+  }
+
+  // ── Provider: Groq ────────────────────────────────────────────────────────
+  async function tryGroq() {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) return { text: null, rateLimited: false, error: 'GROQ_API_KEY חסר' };
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.92,
+        max_tokens: 1024
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error('Groq error:', JSON.stringify(err));
+      const errMsg = (err?.error?.message || '').toLowerCase();
+      const rateLimited =
+        response.status === 429 ||
+        errMsg.includes('rate limit') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('rate_limit');
+      return { text: null, rateLimited, error: err?.error?.message || JSON.stringify(err) };
+    }
+
+    const data = await response.json();
+    return { text: data?.choices?.[0]?.message?.content || null, rateLimited: false, error: null };
+  }
+
+  // ── Provider: Gemini ──────────────────────────────────────────────────────
+  async function tryGemini() {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return { text: null, error: 'GEMINI_API_KEY חסר' };
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.92, maxOutputTokens: 1024 }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error('Gemini error:', JSON.stringify(err));
+      return { text: null, error: err?.error?.message || JSON.stringify(err) };
+    }
+
+    const data = await response.json();
+    return {
+      text: data?.candidates?.[0]?.content?.parts?.[0]?.text || null,
+      error: null
+    };
+  }
+
+  // ── Main: Groq first → fallback to Gemini on rate-limit/quota ────────────
+  try {
+    let text = null;
+    let provider = 'Groq';
+
+    const groqResult = await tryGroq();
+
+    if (groqResult.text) {
+      text = groqResult.text;
+    } else if (groqResult.rateLimited) {
+      // Groq quota/rate-limit hit → try Gemini
+      console.log('Groq rate-limited, falling back to Gemini');
+      provider = 'Gemini';
+      const geminiResult = await tryGemini();
+      if (geminiResult.text) {
+        text = geminiResult.text;
+      } else {
+        return res.status(502).json({
+          error: `Groq: ${groqResult.error} | Gemini: ${geminiResult.error}`
+        });
+      }
+    } else if (!process.env.GROQ_API_KEY) {
+      // Groq not configured at all — go straight to Gemini
+      provider = 'Gemini';
+      const geminiResult = await tryGemini();
+      if (geminiResult.text) {
+        text = geminiResult.text;
+      } else {
+        return res.status(502).json({ error: `שגיאת AI (Gemini): ${geminiResult.error}` });
+      }
+    } else {
+      // Groq failed for a non-rate-limit reason (bad key, server error, etc.)
+      return res.status(502).json({ error: `שגיאת AI (Groq): ${groqResult.error}` });
+    }
+
+    if (!text) {
+      return res.status(502).json({ error: 'לא התקבלה תשובה מה-AI' });
+    }
+
+    console.log(`Provider used: ${provider}`);
+    return res.status(200).json({ post: cleanPost(text) });
   } catch (err) {
     console.error('Handler error:', err);
     return res.status(500).json({ error: 'שגיאת שרת פנימית' });
