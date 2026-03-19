@@ -175,6 +175,8 @@ ${formatInstructions[format] || formatInstructions.hook}
     }
 
     let post = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    // Strip leaked section labels (format guide instructions the model included in output)
+    post = post.replace(/\[פסקה \d+[^\]]*\]\s*/g, '').replace(/\[hashtags\]\s*/g, '').trim();
     // Server-side hard cap — safety net if model ignores the char limit
     if (post.length > hardLimit) {
       const truncated = post.slice(0, hardLimit);
