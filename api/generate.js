@@ -203,7 +203,7 @@ ${formatInstructions[format] || formatInstructions.hook}
   // ── Provider: Cerebras ────────────────────────────────────────────────────
   async function tryCerebras() {
     const cerebrasKey = process.env.CEREBRAS_API_KEY;
-    if (!cerebrasKey) return { text: null, rateLimited: false, error: 'CEREBRAS_API_KEY חסר' };
+    if (!cerebrasKey) return { text: null, fallThrough: true, error: 'CEREBRAS_API_KEY חסר' };
 
     const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
       method: 'POST',
@@ -212,7 +212,7 @@ ${formatInstructions[format] || formatInstructions.hook}
         'Authorization': `Bearer ${cerebrasKey}`
       },
       body: JSON.stringify({
-        model: 'qwen-3-32b',
+        model: 'qwen-3-235b-a22b-instruct-2507',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
@@ -226,16 +226,13 @@ ${formatInstructions[format] || formatInstructions.hook}
       const err = await response.json();
       console.error('Cerebras error:', JSON.stringify(err));
       const errMsg = (err?.error?.message || '').toLowerCase();
-      const rateLimited =
-        response.status === 429 ||
-        errMsg.includes('rate limit') ||
-        errMsg.includes('quota') ||
-        errMsg.includes('rate_limit');
-      return { text: null, rateLimited, error: err?.error?.message || JSON.stringify(err) };
+      // Only hard-fail on auth errors — everything else (model_not_found, quota, etc.) falls through
+      const isAuth = response.status === 401 || response.status === 403 || errMsg.includes('invalid api key');
+      return { text: null, fallThrough: !isAuth, error: err?.error?.message || JSON.stringify(err) };
     }
 
     const data = await response.json();
-    return { text: data?.choices?.[0]?.message?.content || null, rateLimited: false, error: null };
+    return { text: data?.choices?.[0]?.message?.content || null, fallThrough: false, error: null };
   }
 
   // ── Provider: Gemini ──────────────────────────────────────────────────────
@@ -274,14 +271,16 @@ ${formatInstructions[format] || formatInstructions.hook}
     let text = null;
     let provider = '?';
 
-    // 1. Cerebras — primary (1M tokens/day, 2600 t/s, Qwen 3 32B)
+    // 1. Cerebras — primary (1M tokens/day, Qwen 3 235B)
     const cerebrasResult = await tryCerebras();
     if (cerebrasResult.text) {
       text = cerebrasResult.text;
       provider = 'Cerebras';
-    } else if (!cerebrasResult.rateLimited && process.env.CEREBRAS_API_KEY) {
-      // Cerebras configured but failed for a hard reason (bad key, etc.)
+    } else if (!cerebrasResult.fallThrough) {
+      // Hard auth failure — no point trying other providers with same key issues
       return res.status(502).json({ error: `שגיאת AI (Cerebras): ${cerebrasResult.error}` });
+    } else {
+      console.log('Cerebras unavailable, falling back:', cerebrasResult.error);
     }
 
     // 2. Groq — fallback 1 (100K tokens/day, Llama 3.3 70B)

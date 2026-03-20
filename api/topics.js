@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({
-        model: 'qwen-3-32b',
+        model: 'qwen-3-235b-a22b-instruct-2507',
         messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
         temperature: 0.85, max_tokens: 512
       })
