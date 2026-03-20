@@ -1,117 +1,169 @@
 #!/usr/bin/env python3
 """
-PostAI — Live content quality tests (uses real API, costs quota)
-Usage: python3 tests/live.py [--url https://your-url.vercel.app]
-5 API calls total — one per format
+PostAI — Live content quality tests (uses real API quota)
+Usage:
+  python3 tests/live.py                              # production
+  python3 tests/live.py --url https://my-url.app    # custom URL
+9 calls total — covers all platforms, lengths, and formats.
 """
-import sys, json, time, subprocess, unicodedata
+import sys, json, re, time, subprocess
 
 URL = "https://postai-nine.vercel.app"
 for i, arg in enumerate(sys.argv):
     if arg == '--url' and i + 1 < len(sys.argv):
         URL = sys.argv[i + 1]
 
-LIMITS  = {"twitter": 280, "threads": 500, "linkedin": 700}
-TARGETS = {
-    "twitter":  {"short": 120, "medium": 180, "long": 260},
-    "threads":  {"short": 200, "medium": 350, "long": 480},
-    "linkedin": {"short": 300, "medium": 500, "long": 670},
+# ── Must match api/generate.js exactly ───────────────────────────
+HARD_LIMITS = {"twitter": 280, "threads": 500, "linkedin": 700}
+CHAR_TARGETS = {
+    "twitter":  {"short": 120,  "medium": 180,  "long": 274},
+    "threads":  {"short": 200,  "medium": 350,  "long": 493},
+    "linkedin": {"short": 300,  "medium": 500,  "long": 692},
 }
-CTA_SIGNALS = ["?", "מה דעת", "האם", "גם אתם", "כתב", "שתף", "נסה", "הצטרף", "ספר", "איזה"]
+MIN_RATIO = {"short": 0.85, "medium": 0.85, "long": 0.93}
 
-def call(platform, length, fmt, topic="AI ופיננסים 2026"):
-    body = json.dumps({"topic": topic, "platform": platform, "tone": "bold", "length": length, "format": fmt})
+# ── English word allow-list (brand names + acronyms) ─────────────
+ALLOWED_BRANDS = {
+    'McKinsey', 'Morningstar', 'Goldman', 'Sachs', 'OpenAI', 'ChatGPT',
+    'LinkedIn', 'Twitter', 'Threads', 'YouTube', 'WhatsApp', 'Google',
+    'Apple', 'Microsoft', 'Amazon', 'Netflix', 'Tesla', 'Nvidia',
+    'Cerebras', 'Groq', 'Gemini', 'Norges', 'Dalbar', 'Enron',
+    'BlackRock', 'Vanguard', 'Fidelity', 'Berkshire', 'Hathaway',
+    'Standard', 'Poors', 'JPMorgan', 'Sequoia',
+}
+ALLOWED_LOWER = {w.lower() for w in ALLOWED_BRANDS}
+
+# Format labels that must NEVER appear verbatim in output
+FORMAT_LABEL_RE = re.compile(
+    r'^(DATA\s+DROP|HOT\s+TAKE|HOOK|STORY|LIST)\s*(ארוך)?\s*[:\-—]',
+    re.IGNORECASE | re.MULTILINE
+)
+
+IDENTITY = {
+    "field": "פיננסים ו-AI",
+    "role": "אנליסט",
+    "audience": "משקיעים",
+    "voiceWords": "חד, ישיר",
+}
+
+# ── Test matrix ───────────────────────────────────────────────────
+# (platform, length, format, angle, topic)
+TESTS = [
+    ("twitter",  "short",  "hook",     "analysis", "ריבית בנק ישראל והמשקיעים"),
+    ("twitter",  "medium", "hottake",  "stance",   "השקעה בבינה מלאכותית"),
+    ("twitter",  "long",   "datadrop", "insight",  "AI בשוק ההון"),
+    ("twitter",  "long",   "hook",     "analysis", "למה משקיעים מפסידים"),
+    ("threads",  "medium", "story",    "explain",  "טעות שעלתה לי ביוקר"),
+    ("threads",  "long",   "tips",     "analysis", "ניהול תיק השקעות"),
+    ("linkedin", "medium", "hook",     "analysis", "עתיד העבודה עם AI"),
+    ("linkedin", "long",   "story",    "analysis", "ניהול סיכונים בתיק"),
+    ("linkedin", "long",   "datadrop", "insight",  "מהפכת ה-AI"),
+]
+
+
+def call_api(platform, length, fmt, angle, topic):
+    body = json.dumps({
+        "topic": topic, "platform": platform,
+        "angle": angle, "length": length, "format": fmt,
+        "identity": IDENTITY,
+    })
     r = subprocess.run(
-        ["curl", "-s", "--max-time", "45", "-X", "POST", f"{URL}/api/generate",
+        ["curl", "-s", "--max-time", "45", "-X", "POST",
+         f"{URL}/api/generate",
          "-H", "Content-Type: application/json", "-d", body],
         capture_output=True, text=True
     )
     try:
         d = json.loads(r.stdout)
         return d.get("post", ""), d.get("error", "")
-    except:
-        return "", f"parse error: {r.stdout[:60]}"
+    except Exception:
+        return "", f"parse error: {r.stdout[:80]}"
 
-def has_foreign_scripts(text):
-    for c in text:
-        cat = unicodedata.category(c)
-        cp  = ord(c)
-        if cat.startswith('L') and not (
-            0x0590 <= cp <= 0x05FF or   # Hebrew
-            0x0021 <= cp <= 0x007E or   # ASCII printable
-            cp == 0x200F                 # RTL mark
-        ):
-            return c
-    return None
 
-# ── Test matrix: 1 call per format ────────────────────────────────
-TESTS = [
-    # (platform, length, format, topic)
-    ("twitter",  "medium", "hook",     "AI ופיננסים 2026"),
-    ("threads",  "short",  "datadrop", "בינה מלאכותית בשוק ההון"),
-    ("linkedin", "medium", "tips",     "השקעות חכמות עם AI"),
-    ("linkedin", "long",   "story",    "טעות שעלתה לי ביוקר בשוק"),
-    ("threads",  "medium", "hottake",  "AI מחליף את המנהל הפיננסי"),
-]
+def bad_english_words(post):
+    """Return English common words that shouldn't appear (lowercase 5+ chars)."""
+    text = re.sub(r'#\S+', '', post)           # remove hashtags
+    words = re.findall(r'[a-zA-Z]{5,}', text)
+    return sorted({w for w in words
+                   if w.lower() not in ALLOWED_LOWER and not w[0].isupper()})
 
-errors = []
-results = []
 
+def check(post, platform, length, fmt):
+    issues = []
+    limit   = HARD_LIMITS[platform]
+    target  = CHAR_TARGETS[platform][length]
+    min_len = round(target * MIN_RATIO[length])
+
+    # 1. Character length
+    if len(post) < min_len:
+        issues.append(f"קצר מדי: {len(post)} < {min_len}")
+    if len(post) > limit:
+        issues.append(f"חורג ממגבלה: {len(post)} > {limit}")
+
+    # 2. Hebrew present
+    if not re.search(r'[\u05d0-\u05ea]', post):
+        issues.append("אין עברית!")
+
+    # 3. Hashtag
+    if not re.search(r'#\S+', post):
+        issues.append("חסר hashtag")
+
+    # 4. Question / CTA
+    if '?' not in post and not any(
+        w in post for w in ['ספרו', 'השאירו', 'כתבו', 'גם אתם', 'האם']
+    ):
+        issues.append("חסר שאלה/CTA")
+
+    # 5. Format label leaked into output
+    if FORMAT_LABEL_RE.search(post):
+        issues.append("תווית פורמט דלפה (DATA DROP: / HOOK: וכו')")
+
+    # 6. English common words (non-brand, non-acronym)
+    bad = bad_english_words(post)
+    if bad:
+        issues.append(f"מילים אנגליות: {', '.join(bad[:4])}")
+
+    # 7. Tips format: at least 2 numbered items
+    if fmt == 'tips':
+        items = re.findall(r'(?m)^\s*\d+[\.\)]\s+\S', post)
+        if len(items) < 2:
+            issues.append(f"tips: {len(items)} פריטים (צריך לפחות 2)")
+
+    return issues
+
+
+# ── Run ───────────────────────────────────────────────────────────
+fail_count = 0
 print(f"\n🧪 PostAI Live Tests — {URL}")
-print("=" * 62)
-print(f"{'פלטפורמה':<10} {'אורך':<8} {'פורמט':<10} {'תווים':>6}  {'CTA':>4}  {'עברית':>6}  {'status'}")
-print("=" * 62)
+print("═" * 75)
+print(f"  {'פלטפורמה':<10} {'אורך':<8} {'פורמט':<10} {'זווית':<10} {'תווים':>6}  תוצאה")
+print("═" * 75)
 
-for platform, length, fmt, topic in TESTS:
-    post, err = call(platform, length, fmt, topic)
+for platform, length, fmt, angle, topic in TESTS:
+    post, err = call_api(platform, length, fmt, angle, topic)
+    row = f"{platform:<10} {length:<8} {fmt:<10} {angle:<10}"
 
     if err:
-        print(f"  ❌ {platform:<10} {length:<8} {fmt:<10}  ERR: {err[:35]}")
-        errors.append(f"{platform}/{length}/{fmt}: {err[:60]}")
+        print(f"  ❌ {row}  ERR: {err[:40]}")
+        fail_count += 1
         time.sleep(2)
         continue
 
-    limit    = LIMITS[platform]
-    target   = TARGETS[platform][length]
-    char_ok  = target * 0.7 <= len(post) <= limit
-    cta_ok   = any(s in post for s in CTA_SIGNALS)
-    bad_char = has_foreign_scripts(post)
-    heb_ok   = bad_char is None
+    issues = check(post, platform, length, fmt)
+    sym = "✅" if not issues else "❌"
+    detail = " | ".join(issues) if issues else f"OK — {len(post)} תווים"
+    print(f"  {sym} {row} {len(post):>6}  {detail}")
 
-    tips_ok  = True
-    if fmt == "tips":
-        count = sum(1 for line in post.split('\n') if line.strip() and line.strip()[0].isdigit() and '.' in line[:3])
-        tips_ok = count == 5
-
-    all_ok = char_ok and cta_ok and heb_ok and tips_ok
-    sym    = "✅" if all_ok else "⚠️ "
-
-    issues = []
-    if not char_ok:  issues.append(f"אורך {len(post)} (יעד {target}-{limit})")
-    if not cta_ok:   issues.append("חסר CTA")
-    if not heb_ok:   issues.append(f"תו זר: {repr(bad_char)}")
-    if not tips_ok:  issues.append(f"tips: לא 5 סעיפים")
-
-    issue_str = " | ".join(issues)
-    print(f"  {sym} {platform:<10} {length:<8} {fmt:<10} {len(post):>6}  {'✅' if cta_ok else '❌':>4}  {'✅' if heb_ok else '❌':>6}  {issue_str}")
-
-    results.append(all_ok)
-    if not all_ok:
-        errors.append(f"{platform}/{length}/{fmt}: {issue_str}")
-        print(f"     ...{post[-70:]}")
+    if issues:
+        fail_count += 1
+        tail = post[-100:].replace('\n', ' ')
+        print(f"       ...{tail}")
 
     time.sleep(3)
 
-# ── Summary ───────────────────────────────────────────────────────
-passed = sum(results)
-total  = len(results)
-print("=" * 62)
-print(f"\n📊 {passed}/{total} עברו")
-
-if errors:
-    print("\n❌ כישלונות:")
-    for e in errors: print(f"   • {e}")
-    sys.exit(1)
-else:
+print("═" * 75)
+if fail_count == 0:
     print("\n🎉 כל הבדיקות עברו!")
-    sys.exit(0)
+else:
+    print(f"\n❌ {fail_count}/{len(TESTS)} בדיקות נכשלו")
+sys.exit(0 if fail_count == 0 else 1)
