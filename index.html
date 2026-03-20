@@ -1252,13 +1252,13 @@ document.getElementById('ob-overlay').addEventListener('click', function(e) {
 
 function obActivateOther(stepId) {
   const step = OB_STEPS.find(s => s.id === stepId);
-  // Keep predefined selections, just show the "other" input
   const arr = obAnswers[stepId] || [];
-  // If no other values yet, add a placeholder to trigger input display
+  const predefined = arr.filter(v => step.options.find(o => o.label === v));
   const hasOther = arr.some(v => !step.options.find(o => o.label === v));
-  if (!hasOther) {
-    // Add an empty marker so isOtherActive becomes true
-    obAnswers[stepId] = [...arr, ''];
+  if (hasOther) {
+    obAnswers[stepId] = predefined;   // toggle OFF — remove manual entries
+  } else {
+    obAnswers[stepId] = [...predefined, ''];  // toggle ON — show input
   }
   renderObStep();
 }
