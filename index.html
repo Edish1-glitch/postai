@@ -825,6 +825,7 @@
         <button class="pill" data-format="datadrop" onclick="selectPill('format', this)">📊 Data Drop</button>
         <button class="pill" data-format="tips" onclick="selectPill('format', this)">🎯 טיפים</button>
       </div>
+      <div id="format-desc" style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5">פותח בהצהרה שמושכת תשומת לב — הקורא לא יכול לעצור</div>
     </div>
 
     <!-- Length -->
@@ -835,6 +836,7 @@
         <button class="pill selected" data-length="medium" onclick="selectPill('length', this)">📝 בינוני</button>
         <button class="pill" data-length="long" onclick="selectPill('length', this)">📖 ארוך</button>
       </div>
+      <div id="length-desc" style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5">כחצי ממגבלת הפלטפורמה. איזון בין עומק לקריאות</div>
     </div>
 
     <!-- Generate -->
@@ -1050,6 +1052,20 @@ const ANGLE_DESC = {
   insight:  'מציג זווית שמשנה איך חושבים על הנושא'
 };
 
+const FORMAT_DESC = {
+  hook:     'פותח בהצהרה שמושכת תשומת לב — הקורא לא יכול לעצור',
+  hottake:  'דעה חריפה ומנוגדת לקונבנציה — מעורר דיון',
+  story:    'סיפור אישי או תרחיש שמעביר מסר בדרך עקיפה',
+  datadrop: 'נתון מפתיע → קונטקסט → משמעות מעשית',
+  tips:     'רשימת טיפים מספורים — ברורים, ישימים, ישירים'
+};
+
+const LENGTH_DESC = {
+  short:  'קצר — עד שליש ממגבלת הפלטפורמה. פגיעה ישירה',
+  medium: 'בינוני — כחצי ממגבלת הפלטפורמה. איזון בין עומק לקריאות',
+  long:   'ארוך — קרוב למגבלת הפלטפורמה. פיתוח רעיון מלא'
+};
+
 let historyFilter = { platform: 'all', starred: false, search: '' };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1091,6 +1107,14 @@ function selectPill(group, btn) {
   if (group === 'angle') {
     const desc = document.getElementById('angle-desc');
     if (desc) desc.textContent = ANGLE_DESC[state.angle] || '';
+  }
+  if (group === 'format') {
+    const desc = document.getElementById('format-desc');
+    if (desc) desc.textContent = FORMAT_DESC[state.format] || '';
+  }
+  if (group === 'length') {
+    const desc = document.getElementById('length-desc');
+    if (desc) desc.textContent = LENGTH_DESC[state.length] || '';
   }
 }
 
