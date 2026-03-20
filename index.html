@@ -1264,6 +1264,10 @@ function obActivateOther(stepId) {
   if (hasOther) {
     obAnswers[stepId] = predefined;   // toggle OFF — remove manual entries
   } else {
+    if (predefined.length >= step.maxSelect) {
+      toast(`ניתן לבחור עד ${step.maxSelect} אפשרויות`);
+      return;
+    }
     obAnswers[stepId] = [...predefined, ''];  // toggle ON — show input
   }
   renderObStep();
