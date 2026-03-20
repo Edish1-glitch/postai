@@ -758,6 +758,18 @@
       </div>
     </div>
 
+    <!-- Identity banner — visible only when no identity card is set -->
+    <div id="identity-banner" class="card" style="border:1px dashed var(--accent);background:var(--accent-dim);display:none;cursor:pointer" onclick="showTab('settings');setTimeout(()=>document.getElementById('identity-form-card').scrollIntoView({behavior:'smooth'}),120)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:26px">🪪</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">הגדר את הקול שלך</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">כרטיס זהות עוזר ל-AI לכתוב בסגנון שלך</div>
+        </div>
+        <div style="color:var(--accent);font-size:18px">›</div>
+      </div>
+    </div>
+
     <!-- Topic -->
     <div class="card">
       <div class="card-title">נושא הפוסט</div>
@@ -770,15 +782,16 @@
       <div class="char-count"><span id="char-count">0</span>/300</div>
     </div>
 
-    <!-- Tone -->
+    <!-- Angle -->
     <div class="card">
-      <div class="card-title">טון</div>
-      <div class="pill-group">
-        <button class="pill selected" data-tone="professional" onclick="selectPill('tone', this)">🎩 מקצועי</button>
-        <button class="pill" data-tone="casual" onclick="selectPill('tone', this)">😎 שיחתי</button>
-        <button class="pill" data-tone="bold" onclick="selectPill('tone', this)">🔥 נועז</button>
-        <button class="pill" data-tone="educational" onclick="selectPill('tone', this)">📚 חינוכי</button>
+      <div class="card-title">זווית</div>
+      <div class="pill-group" style="flex-wrap:wrap;gap:8px">
+        <button class="pill selected" data-angle="analysis" onclick="selectPill('angle', this)">🔬 ניתוח</button>
+        <button class="pill" data-angle="explain" onclick="selectPill('angle', this)">💡 הסבר</button>
+        <button class="pill" data-angle="stance" onclick="selectPill('angle', this)">⚡ עמדה</button>
+        <button class="pill" data-angle="insight" onclick="selectPill('angle', this)">❓ תובנה</button>
       </div>
+      <div id="angle-desc" style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5">מביא נתון → בונה טיעון → מסיק מסקנה חדה</div>
     </div>
 
     <!-- Format -->
@@ -861,6 +874,40 @@
   <!-- ── SETTINGS TAB ────────────────────────────────────────────────────── -->
   <div id="settings-section">
     <div class="settings-title">⚙️ הגדרות</div>
+
+    <!-- Identity Card -->
+    <div class="card" id="identity-form-card">
+      <div class="card-title">🪪 כרטיס זהות — הקול שלך</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">שמור פעם אחת — יוחל אוטומטית על כל פוסט.</div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">תחום / נישה</label>
+          <input id="id-field" type="text" placeholder="פיננסים, שיווק, נדל&quot;ן, בריאות..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">מי אתה</label>
+          <input id="id-role" type="text" placeholder="יועץ, יזם, רופא, מאמן עסקי..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">קהל היעד שלך</label>
+          <input id="id-audience" type="text" placeholder="משקיעים מתחילים, מנהלי שיווק, יזמים..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">3 מילות סגנון <span style="color:var(--text-muted);font-weight:400">(מה מאפיין אותך)</span></label>
+          <input id="id-voice" type="text" placeholder="חינוכי, ישיר, מבוסס-נתונים" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">מה אתה לא <span style="color:var(--text-muted);font-weight:400">(אופציונלי)</span></label>
+          <input id="id-not" type="text" placeholder="לא רדוד, לא קלישאות, לא שיפוטי" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+        </div>
+      </div>
+
+      <button onclick="saveIdentityForm()" style="width:100%;margin-top:16px;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:white;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s">
+        💾 שמור כרטיס זהות
+      </button>
+      <div id="identity-saved-msg" style="display:none;text-align:center;margin-top:10px;color:var(--success);font-size:13px">✅ הכרטיס נשמר — יוחל על כל הפוסטים הבאים</div>
+    </div>
 
     <div class="card">
       <div class="card-title">התראות Push</div>
@@ -947,8 +994,8 @@
     <div class="card">
       <div class="card-title">אודות</div>
       <div style="color:var(--text-muted); font-size:14px; line-height:1.8">
-        <div>PostAI v2.0</div>
-        <div>Powered by Llama 3.3 70B (Groq)</div>
+        <div>PostAI v3.0</div>
+        <div>Powered by Qwen 3 32B (Cerebras) + Groq + Gemini</div>
         <div>בנוי עם ❤️ בעברית</div>
       </div>
     </div>
@@ -964,7 +1011,7 @@
 // ═══════════════════════════════════════════════════════════════
 const state = {
   platform: 'twitter',
-  tone: 'professional',
+  angle: 'analysis',
   length: 'medium',
   format: 'hook',
   currentPost: '',
@@ -973,6 +1020,14 @@ const state = {
 
 const PLATFORM_LIMITS = { twitter: 280, threads: 500, linkedin: 700 };
 const STORAGE_KEY = 'postai_history_v2';
+const IDENTITY_KEY = 'postai_identity_v1';
+
+const ANGLE_DESC = {
+  analysis: 'מביא נתון → בונה טיעון → מסיק מסקנה חדה',
+  explain:  'מסביר מורכב בפשטות — עומק בלי לרדד',
+  stance:   'לוקח צד ברור — אומר מה אחרים לא אומרים',
+  insight:  'מציג זווית שמשנה איך חושבים על הנושא'
+};
 
 let historyFilter = { platform: 'all', starred: false, search: '' };
 
@@ -992,7 +1047,7 @@ function showTab(name) {
   document.getElementById(`tab-${name}`)?.classList.add('active');
 
   if (name === 'history') renderHistory();
-  if (name === 'settings') { renderPushStatus(); updateStorageInfo(); renderXStatus(); }
+  if (name === 'settings') { renderPushStatus(); updateStorageInfo(); renderXStatus(); loadIdentityForm(); }
 }
 
 // Init create section visibility
@@ -1012,6 +1067,10 @@ function selectPill(group, btn) {
   btn.closest('.pill-group').querySelectorAll('.pill').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   state[group] = btn.dataset[group];
+  if (group === 'angle') {
+    const desc = document.getElementById('angle-desc');
+    if (desc) desc.textContent = ANGLE_DESC[state.angle] || '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1030,6 +1089,52 @@ function updateResultCharPill() {
   const pct = len / limit;
   pill.textContent = `${len} / ${limit} תווים`;
   pill.className = 'char-pill ' + (pct > 1 ? 'over' : pct > 0.85 ? 'warn' : 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// IDENTITY CARD
+// ═══════════════════════════════════════════════════════════════
+function getIdentity() {
+  try { return JSON.parse(localStorage.getItem(IDENTITY_KEY)) || null; }
+  catch { return null; }
+}
+
+function saveIdentity(identity) {
+  localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
+}
+
+function loadIdentityForm() {
+  const id = getIdentity();
+  if (!id) return;
+  document.getElementById('id-field').value    = id.field      || '';
+  document.getElementById('id-role').value     = id.role       || '';
+  document.getElementById('id-audience').value = id.audience   || '';
+  document.getElementById('id-voice').value    = id.voiceWords || '';
+  document.getElementById('id-not').value      = id.notWords   || '';
+}
+
+function saveIdentityForm() {
+  const identity = {
+    field:      document.getElementById('id-field').value.trim(),
+    role:       document.getElementById('id-role').value.trim(),
+    audience:   document.getElementById('id-audience').value.trim(),
+    voiceWords: document.getElementById('id-voice').value.trim(),
+    notWords:   document.getElementById('id-not').value.trim()
+  };
+  if (!identity.field && !identity.role) {
+    toast('✍️ הכנס לפחות תחום ומי אתה');
+    return;
+  }
+  saveIdentity(identity);
+  document.getElementById('identity-saved-msg').style.display = 'block';
+  setTimeout(() => { document.getElementById('identity-saved-msg').style.display = 'none'; }, 3000);
+  toast('✅ כרטיס זהות נשמר!');
+  checkIdentityBanner();
+}
+
+function checkIdentityBanner() {
+  const banner = document.getElementById('identity-banner');
+  if (banner) banner.style.display = getIdentity() ? 'none' : 'block';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1169,9 +1274,39 @@ function renderSuggestions(items) {
   });
 }
 
-function refreshSuggestions() {
+async function refreshSuggestions() {
+  const identity = getIdentity();
+  if (identity && identity.field) {
+    await loadAISuggestions(identity.field);
+  } else {
+    const shuffled = [...SUGGESTION_POOL].sort(() => Math.random() - 0.5);
+    renderSuggestions(shuffled.slice(0, 6));
+  }
+}
+
+async function loadAISuggestions(field) {
+  const list = document.getElementById('suggestions-list');
+  list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:14px;font-size:13px">⏳ מייצר רעיונות מותאמים...</div>';
+  try {
+    const res = await fetch('/api/topics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, count: 6 })
+    });
+    const data = await res.json();
+    if (data.topics && data.topics.length) {
+      renderSuggestions(data.topics.map(t => ({ e: t.emoji, t: t.text })));
+    } else {
+      fallbackSuggestions();
+    }
+  } catch {
+    fallbackSuggestions();
+  }
+}
+
+function fallbackSuggestions() {
   const shuffled = [...SUGGESTION_POOL].sort(() => Math.random() - 0.5);
-  renderSuggestions(shuffled.slice(0, 4));
+  renderSuggestions(shuffled.slice(0, 6));
 }
 
 function useSuggestion(text) {
@@ -1211,7 +1346,7 @@ async function generate() {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic, platform: state.platform, tone: state.tone, length: state.length, format: state.format })
+      body: JSON.stringify({ topic, platform: state.platform, angle: state.angle, length: state.length, format: state.format, identity: getIdentity() })
     });
 
     const data = await res.json();
@@ -1291,7 +1426,7 @@ function savePost() {
     id: Date.now(),
     post: state.currentPost,
     platform: state.platform,
-    tone: state.tone,
+    angle: state.angle,
     length: state.length,
     starred: false,
     date: new Date().toISOString()
@@ -1361,7 +1496,7 @@ function renderHistory() {
     <div class="history-item ${entry.starred ? 'starred' : ''}" id="hi-${entry.id}">
       <div class="history-meta">
         <span class="meta-chip ${entry.platform}">${platformLabel(entry.platform)}</span>
-        <span class="meta-chip">${toneLabel(entry.tone)}</span>
+        <span class="meta-chip">${angleLabel(entry.angle || entry.tone)}</span>
         ${entry.starred ? '<span style="font-size:14px">⭐</span>' : ''}
         <span class="meta-date">${dateStr}</span>
       </div>
@@ -1383,8 +1518,11 @@ function renderHistory() {
 function platformLabel(p) {
   return { twitter: '𝕏 Twitter', threads: '🧵 Threads', linkedin: '💼 LinkedIn' }[p] || p;
 }
-function toneLabel(t) {
-  return { professional: '🎩 מקצועי', casual: '😎 שיחתי', bold: '🔥 נועז', educational: '📚 חינוכי' }[t] || t;
+function angleLabel(a) {
+  return { analysis: '🔬 ניתוח', explain: '💡 הסבר', stance: '⚡ עמדה', insight: '❓ תובנה' }[a]
+    // backward-compat with old history entries that had tone
+    || { professional: '🎩 מקצועי', casual: '😎 שיחתי', bold: '🔥 נועז', educational: '📚 חינוכי' }[a]
+    || a;
 }
 
 function toggleExpand(id) {
@@ -1417,11 +1555,11 @@ function recyclePost(id) {
   });
   state.platform = entry.platform;
 
-  // Set tone
-  document.querySelectorAll('[data-tone]').forEach(b => {
-    b.classList.toggle('selected', b.dataset.tone === entry.tone);
+  // Set angle
+  document.querySelectorAll('[data-angle]').forEach(b => {
+    b.classList.toggle('selected', b.dataset.angle === (entry.angle || 'analysis'));
   });
-  state.tone = entry.tone;
+  state.angle = entry.angle || 'analysis';
 
   showTab('create');
   toast('🔄 הגדרות נטענו — הכנס נושא חדש וצור!');
@@ -1991,6 +2129,11 @@ if (_autopostId) {
 
 // Initial queue check
 checkXQueue();
+
+// Init identity banner + suggestions
+checkIdentityBanner();
+refreshSuggestions();
+updateHistoryBadge();
 </script>
 </body>
 </html>

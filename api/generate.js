@@ -10,15 +10,15 @@ export default async function handler(req, res) {
     });
   }
 
-  const { topic, platform, tone, length, format } = req.body;
+  const { topic, platform, angle, length, format, identity } = req.body;
 
   if (!topic) {
     return res.status(400).json({ error: 'נדרש נושא לפוסט' });
   }
 
   // At least one provider must be configured
-  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
-    return res.status(500).json({ error: 'לא הוגדר API key — הוסף GROQ_API_KEY או GEMINI_API_KEY' });
+  if (!process.env.CEREBRAS_API_KEY && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'לא הוגדר API key — הוסף CEREBRAS_API_KEY, GROQ_API_KEY, או GEMINI_API_KEY' });
   }
 
   const platformLimits = { twitter: 280, threads: 500, linkedin: 700 };
@@ -36,12 +36,18 @@ export default async function handler(req, res) {
     linkedin: `LinkedIn — מגבלה מוחלטת: ${hardLimit} תווים. מקצועי, call-to-action ברור בסוף.`
   };
 
-  const toneMap = {
-    professional: 'מקצועי ואמין, מדבר כמו מומחה שיודע על מה הוא מדבר',
-    casual: 'שיחתי וקליל, כמו שיחה עם חבר חכם',
-    bold: 'נועז ופרובוקטיבי, לא מפחד לאתגר',
-    educational: 'חינוכי, מסביר מורכב בפשטות'
+  const angleMap = {
+    analysis: 'מנתח: מביא נתון → בונה טיעון → מסיק מסקנה חדה. כל טענה מגובה בהוכחה.',
+    explain:  'מסביר: הופך מורכב לפשוט. ברמה שחבר חכם יבין — עם עומק, בלי לרדד.',
+    stance:   'עמדה: לוקח צד ברור. אומר מה אחרים לא אומרים. מגובה בלוגיקה, לא ברגש.',
+    insight:  'תובנה: מציג זווית שמשנה איך הקורא חושב על הנושא. שאלה שנשארת בראש.'
   };
+
+  // Identity DNA — injected when user has set up their profile
+  const hasIdentity = identity && (identity.field || identity.role);
+  const identityDNA = hasIdentity
+    ? `\nהכותב: ${identity.role || 'יוצר תוכן'} בתחום ${identity.field || 'כללי'}.קהל: ${identity.audience || 'קהל רחב'}.סגנון: ${identity.voiceWords || 'מקצועי'}.${identity.notWords ? `\nלא: ${identity.notWords}.` : ''}`
+    : '';
 
   const minTarget = length === 'long'
     ? Math.round(charTarget * 0.93)
@@ -103,9 +109,9 @@ ${length === 'short'
 סיים עם שאלה קצרה שמעוררת מעורבות.`
   };
 
-  const prompt = `אתה יוצר תוכן ויראלי בתחום AI ופיננסים.
-קהל: משקיעים, יזמים, אנשי טכנולוגיה — מתחילים עד מקצוענים.
-סגנון: ${toneMap[tone] || toneMap.professional}.
+  const prompt = `אתה יוצר תוכן ויראלי בתחום ${hasIdentity ? identity.field : 'AI ופיננסים'}.
+קהל: ${hasIdentity ? identity.audience || 'קהל רחב' : 'משקיעים, יזמים, אנשי טכנולוגיה — מתחילים עד מקצוענים'}.
+זווית: ${angleMap[angle] || angleMap.analysis}.${identityDNA}
 
 נושא: "${topic}"
 פלטפורמה: ${platformInstructions[platform] || platformInstructions.twitter}
@@ -128,7 +134,7 @@ ${formatInstructions[format] || formatInstructions.hook}
 ❌ אל תכתוב "חשוב לזכור" / "כדאי לציין" — משעמם
 ❌ אל תוסיף הסברים, הקדמות או מרכאות — רק הפוסט`;
 
-  const systemPrompt = `אתה כותב תוכן עברי לרשתות חברתיות. כללים שאסור לשבור:
+  const systemPrompt = `אתה כותב תוכן עברי לרשתות חברתיות${hasIdentity && identity.voiceWords ? ` בסגנון: ${identity.voiceWords}` : ''}. כללים שאסור לשבור:
 1. כתוב רק עברית — אפשר מילות מפתח באנגלית (שמות חברות, מושגים), אבל כל המשפטים בעברית.
 2. אסור לחרוג מ-${hardLimit} תווים כולל הכל.
 3. כתוב את כל הפסקאות הנדרשות ברצף — ללא כותרות, תוויות בסוגריים, או סימנים מיוחדים לפני פסקה.
@@ -194,6 +200,44 @@ ${formatInstructions[format] || formatInstructions.hook}
     return { text: data?.choices?.[0]?.message?.content || null, rateLimited: false, error: null };
   }
 
+  // ── Provider: Cerebras ────────────────────────────────────────────────────
+  async function tryCerebras() {
+    const cerebrasKey = process.env.CEREBRAS_API_KEY;
+    if (!cerebrasKey) return { text: null, rateLimited: false, error: 'CEREBRAS_API_KEY חסר' };
+
+    const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cerebrasKey}`
+      },
+      body: JSON.stringify({
+        model: 'qwen-3-32b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.92,
+        max_tokens: 1024
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error('Cerebras error:', JSON.stringify(err));
+      const errMsg = (err?.error?.message || '').toLowerCase();
+      const rateLimited =
+        response.status === 429 ||
+        errMsg.includes('rate limit') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('rate_limit');
+      return { text: null, rateLimited, error: err?.error?.message || JSON.stringify(err) };
+    }
+
+    const data = await response.json();
+    return { text: data?.choices?.[0]?.message?.content || null, rateLimited: false, error: null };
+  }
+
   // ── Provider: Gemini ──────────────────────────────────────────────────────
   async function tryGemini() {
     const geminiKey = process.env.GEMINI_API_KEY;
@@ -225,39 +269,43 @@ ${formatInstructions[format] || formatInstructions.hook}
     };
   }
 
-  // ── Main: Groq first → fallback to Gemini on rate-limit/quota ────────────
+  // ── Main: Cerebras → Groq → Gemini ───────────────────────────────────────
   try {
     let text = null;
-    let provider = 'Groq';
+    let provider = '?';
 
-    const groqResult = await tryGroq();
+    // 1. Cerebras — primary (1M tokens/day, 2600 t/s, Qwen 3 32B)
+    const cerebrasResult = await tryCerebras();
+    if (cerebrasResult.text) {
+      text = cerebrasResult.text;
+      provider = 'Cerebras';
+    } else if (!cerebrasResult.rateLimited && process.env.CEREBRAS_API_KEY) {
+      // Cerebras configured but failed for a hard reason (bad key, etc.)
+      return res.status(502).json({ error: `שגיאת AI (Cerebras): ${cerebrasResult.error}` });
+    }
 
-    if (groqResult.text) {
-      text = groqResult.text;
-    } else if (groqResult.rateLimited) {
-      // Groq quota/rate-limit hit → try Gemini
-      console.log('Groq rate-limited, falling back to Gemini');
-      provider = 'Gemini';
-      const geminiResult = await tryGemini();
-      if (geminiResult.text) {
-        text = geminiResult.text;
-      } else {
-        return res.status(502).json({
-          error: `Groq: ${groqResult.error} | Gemini: ${geminiResult.error}`
-        });
+    // 2. Groq — fallback 1 (100K tokens/day, Llama 3.3 70B)
+    if (!text) {
+      console.log('Falling back to Groq');
+      const groqResult = await tryGroq();
+      if (groqResult.text) {
+        text = groqResult.text;
+        provider = 'Groq';
+      } else if (!groqResult.rateLimited && process.env.GROQ_API_KEY) {
+        return res.status(502).json({ error: `שגיאת AI (Groq): ${groqResult.error}` });
       }
-    } else if (!process.env.GROQ_API_KEY) {
-      // Groq not configured at all — go straight to Gemini
-      provider = 'Gemini';
+    }
+
+    // 3. Gemini — fallback 2
+    if (!text) {
+      console.log('Falling back to Gemini');
       const geminiResult = await tryGemini();
       if (geminiResult.text) {
         text = geminiResult.text;
+        provider = 'Gemini';
       } else {
         return res.status(502).json({ error: `שגיאת AI (Gemini): ${geminiResult.error}` });
       }
-    } else {
-      // Groq failed for a non-rate-limit reason (bad key, server error, etc.)
-      return res.status(502).json({ error: `שגיאת AI (Groq): ${groqResult.error}` });
     }
 
     if (!text) {
