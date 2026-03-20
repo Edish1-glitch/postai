@@ -1172,11 +1172,13 @@ function startOnboarding() {
   }
   obStep = 0;
   document.getElementById('ob-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
   renderObStep();
 }
 
 function closeOnboarding() {
   document.getElementById('ob-overlay').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 function renderObStep() {
