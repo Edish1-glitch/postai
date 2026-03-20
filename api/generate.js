@@ -63,28 +63,28 @@ export default async function handler(req, res) {
 
   const formatInstructions = {
     hook: length !== 'long'
-      ? `HOOK — שורה 1 עוצרת גלילה ("X% לא יודעים ש..." / "הטעות שעלתה לי X ש'"). תובנה + זווית חדשה. סיים בשאלה.`
-      : `HOOK ארוך — שורה 1 עוצרת גלילה (נתון/שאלה מפתיעה).
-גוף: 3-4 משפטים — תובנה, נתון ממחקר, דוגמה מהשוק, מה המשמעות.
-סיום: שאלה לדיון + hashtags.
-⚠️ חובה: ${minTarget}+ תווים לפני hashtags — אם קצר מזה, הוסף עוד משפט.`,
+      ? `פורמט: HOOK — שורה 1 עוצרת גלילה ("X% לא יודעים ש..." / "הטעות שעלתה לי X ש'"). תובנה + זווית חדשה. סיים בשאלה.`
+      : `פורמט: HOOK ארוך — שורה 1 עוצרת גלילה (נתון/שאלה מפתיעה).
+גוף: 3-4 משפטים — תובנה, נתון ממחקר, דוגמה, משמעות.
+סיום חובה: שאלה לדיון + hashtags.
+⚠️ ${minTarget}+ תווים לפני hashtags — אם קצר מזה, הוסף משפט.`,
 
-    hottake: `HOT TAKE — פתח ב"דעה לא פופולרית:" או "אמת שאף אחד לא אומר:". עמדה שמאתגרת קונבנציה עם לוגיקה. סיים בשאלה.`,
+    hottake: `פורמט: HOT TAKE — פתח ב"דעה לא פופולרית:" או "אמת שאף אחד לא אומר:". עמדה שמאתגרת קונבנציה עם לוגיקה. סיים בשאלה.`,
 
     story: length !== 'long'
-      ? `STORY — גוף ראשון. מבנה: מצב → מה קרה → לקח. מספרים ספציפיים. לקח מעשי + שאלה.`
-      : `STORY ארוך — גוף ראשון:
-רקע + מספרים ספציפיים → בעיה + רגע מכריע + תוצאה → לקח + שאלה + hashtags.
+      ? `פורמט: STORY — גוף ראשון. מבנה: מצב → מה קרה → לקח. מספרים ספציפיים. לקח מעשי + שאלה.`
+      : `פורמט: STORY ארוך — גוף ראשון:
+רקע + מספרים → בעיה + רגע מכריע + תוצאה → לקח + שאלה + hashtags.
 ⚠️ ספור לפני סיום — חייב ${minTarget}+ תווים.`,
 
     datadrop: length !== 'long'
-      ? `DATA DROP — שורה 1: סטטיסטיקה/עובדה מפתיעה. שורה 2: מה זה אומר למשקיע? שאלה + hashtags.`
-      : `DATA DROP ארוך — שורה 1: סטטיסטיקה מפתיעה.
+      ? `פורמט: DATA DROP — שורה 1: סטטיסטיקה/עובדה מפתיעה. שורה 2: מה זה אומר למשקיע? שאלה + hashtags.`
+      : `פורמט: DATA DROP ארוך — שורה 1: סטטיסטיקה מפתיעה.
 גוף: מה זה אומר + הרחבה עם דוגמה + נתון שני מתקשר.
-סיום: שאלה + hashtags.
-⚠️ ${minTarget}+ תווים לפני hashtags.`,
+סיום חובה: שאלה + hashtags.
+⚠️ ${minTarget}+ תווים לפני hashtags — אם קצר מזה, הוסף הרחבה.`,
 
-    tips: `LIST — כותרת "${length === 'short' ? '3' : length === 'long' ? '5-7' : '5'} דברים ש[תובנה]:" — פריטים ממוספרים.${length === 'short' ? ' כל סעיף: מספר + משפט.' : ' כל סעיף: מספר + משפט + ביטוי מחדד.'} שאלה בסוף.`
+    tips: `פורמט: LIST — כותרת "${length === 'short' ? '3' : length === 'long' ? '5-7' : '5'} דברים ש[תובנה]:" — פריטים ממוספרים.${length === 'short' ? ' כל סעיף: מספר + משפט.' : ' כל סעיף: מספר + משפט + ביטוי מחדד.'} שאלה בסוף.`
   };
 
   const prompt = `אתה יוצר תוכן ויראלי בתחום ${hasIdentity ? identity.field : 'AI ופיננסים'}.
@@ -114,15 +114,16 @@ ${formatInstructions[format] || formatInstructions.hook}
   const systemPrompt = `אתה כותב תוכן עברי לרשתות חברתיות${hasIdentity && identity.voiceWords ? ` בסגנון: ${identity.voiceWords}` : ''}. כללים שאסור לשבור:
 1. עברית בלבד — מותר: שמות מותגים (McKinsey, OpenAI), ראשי תיבות (AI, IPO, GDP), hashtags. כל שאר המילים: עברית בלבד. אסור: מילים אנגליות רגילות כמו "institutional", "exposure", "intensive".
 2. אסור לחרוג מ-${hardLimit} תווים כולל הכל.
-3. כתוב ברצף — ללא כותרות, תוויות בסוגריים, או סימנים לפני פסקה.
+3. כתוב ברצף — ללא כותרות, תוויות בסוגריים, שמות פורמטים (DATA DROP, HOOK, HOT TAKE), או סימנים לפני פסקה.
 4. ברשימה ממוספרת — סיים את הסעיף האחרון לפני hashtags.
 5. בפוסט ארוך: הגע לפחות ${minTarget} תווים — אם קצר מזה, הוסף פרט או הרחבה.`;
 
   // ── Helper: clean raw model text → final post ─────────────────────────────
   function cleanPost(text) {
     let post = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-    // Strip leaked section labels
+    // Strip leaked section/format labels
     post = post.replace(/\[פסקה \d+[^\]]*\]\s*/g, '').replace(/\[hashtags\]\s*/g, '').trim();
+    post = post.replace(/^(DATA DROP|HOT TAKE|HOOK|STORY|LIST)\s*(ארוך)?\s*[:\-—]+\s*/i, '').trim();
     // Server-side hard cap — safety net if model ignores the char limit
     if (post.length > hardLimit) {
       const truncated = post.slice(0, hardLimit);
