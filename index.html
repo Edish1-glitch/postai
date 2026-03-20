@@ -55,9 +55,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: max(env(safe-area-inset-top), 16px) 0 20px;
+      padding: 16px 0 20px;
       position: sticky;
-      top: 0;
+      top: env(safe-area-inset-top);
       z-index: 500;
       background: var(--bg);
     }
