@@ -779,11 +779,11 @@
     #ob-other-input:focus { outline: none; }
     #ob-nav { display: flex; gap: 12px; }
     #ob-close-btn {
-      position: absolute; top: max(env(safe-area-inset-top, 0px), 14px); right: 14px;
       width: 34px; height: 34px; border-radius: 50%;
       background: var(--surface2); border: 1px solid var(--border);
       color: var(--text-muted); font-size: 16px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
       transition: var(--transition); -webkit-tap-highlight-color: transparent;
     }
     #ob-close-btn:hover { border-color: var(--accent); color: var(--text); }
@@ -1102,8 +1102,10 @@
 
 <!-- ── Onboarding Overlay ─────────────────────────────────────────────────── -->
 <div id="ob-overlay" style="display:none">
-  <button id="ob-close-btn" onclick="obConfirmClose()">✕</button>
   <div id="ob-inner">
+    <div style="display:flex;justify-content:flex-end">
+      <button id="ob-close-btn" onclick="obConfirmClose()">✕</button>
+    </div>
     <div id="ob-progress-bar-wrap"><div id="ob-progress-bar"></div></div>
     <div id="ob-dots"></div>
     <div id="ob-content"></div>
