@@ -744,7 +744,7 @@
     }
     #ob-inner {
       width: 100%; max-width: 440px;
-      display: flex; flex-direction: column; gap: 20px;
+      display: flex; flex-direction: column; gap: 24px;
       padding-bottom: 20px; min-height: 100%;
     }
     #ob-progress-bar-wrap { background: var(--border); border-radius: 999px; height: 4px; }
@@ -767,7 +767,7 @@
     .ob-card .ob-card-icon { font-size: 28px; line-height: 1; }
     .ob-card:hover { border-color: var(--accent); background: var(--accent-dim); }
     .ob-card.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
-    .ob-card.ob-other { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 8px; padding: 14px; }
+    .ob-card.ob-other { flex-direction: row; justify-content: center; gap: 8px; padding: 14px; }
     #ob-other-input {
       width: 100%; padding: 12px 14px;
       background: var(--surface2); border: 1.5px solid var(--accent);
@@ -1086,8 +1086,8 @@
     <div id="ob-dots"></div>
     <div id="ob-content"></div>
     <div id="ob-nav">
-      <button id="ob-back-btn" onclick="obBack()">← חזור</button>
-      <button id="ob-next-btn" onclick="obNext()">הבא →</button>
+      <button id="ob-back-btn" onclick="obBack()">חזור →</button>
+      <button id="ob-next-btn" onclick="obNext()">← הבא</button>
     </div>
   </div>
 </div>
@@ -1194,8 +1194,7 @@ function renderObStep() {
   document.getElementById('ob-back-btn').style.display = obStep === 0 ? 'none' : '';
   const isLastReal = obStep === total - 1;
   document.getElementById('ob-next-btn').textContent =
-    isSummary ? '🚀 התחל ליצור!' :
-    (isLastReal && OB_STEPS[obStep].optional ? 'הבא →' : 'הבא →');
+    isSummary ? '🚀 התחל ליצור!' : '← הבא';
 
   if (isSummary) { renderObSummary(); return; }
 
@@ -1205,43 +1204,51 @@ function renderObStep() {
   const isOtherActive = currentVals.some(v => !step.options.find(o => o.label === v));
   const otherVals = currentVals.filter(v => !step.options.find(o => o.label === v));
 
+  const _hesc = s => s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   document.getElementById('ob-content').innerHTML = `
     <div style="text-align:center">
-      <div style="font-size:44px;margin-bottom:10px">${step.emoji}</div>
+      <div style="font-size:44px;margin-bottom:14px">${step.emoji}</div>
       <div class="ob-title">${step.title}</div>
       <div class="ob-subtitle">${step.subtitle}</div>
     </div>
-    <div class="ob-options">
+    <div class="ob-options" style="margin-top:22px">
       ${step.options.map(opt => {
         const sel = currentVals.includes(opt.label);
-        const safeLabel = opt.label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-        return `<div class="ob-card ${sel ? 'selected' : ''}" onclick="obToggleOption('${step.id}','${safeLabel}',${step.maxSelect})">
+        return `<div class="ob-card ${sel ? 'selected' : ''}" data-stepid="${step.id}" data-label="${_hesc(opt.label)}" data-maxselect="${step.maxSelect}">
           <div class="ob-card-icon">${opt.icon}</div>
           <div>${opt.label}</div>
         </div>`;
       }).join('')}
-      <div class="ob-card ob-other ${isOtherActive ? 'selected' : ''}" onclick="obActivateOther('${step.id}')">
-        <span>✍️</span><span>אחר / הכנס ידנית</span>
-      </div>
     </div>
-    ${isOtherActive ? `<input id="ob-other-input" type="text" placeholder="הכנס ידנית (אפשר כמה, מופרדים בפסיק)" value="${otherVals.join(', ')}" oninput="obOtherChange('${step.id}')" />` : ''}
+    <div class="ob-card ob-other ${isOtherActive ? 'selected' : ''}" style="margin-top:10px" onclick="obActivateOther('${step.id}')">
+      <span>✍️</span><span>אחר / הכנס ידנית</span>
+    </div>
+    ${isOtherActive ? `<input id="ob-other-input" type="text" placeholder="הכנס ידנית (אפשר כמה, מופרדים בפסיק)" value="${_hesc(otherVals.join(', '))}" oninput="obOtherChange('${step.id}')" />` : ''}
   `;
   if (isOtherActive) setTimeout(() => document.getElementById('ob-other-input')?.focus(), 50);
 }
 
 function obToggleOption(stepId, label, maxSelect) {
-  const arr = obAnswers[stepId] || [];
+  const arr = [...(obAnswers[stepId] || [])];   // copy — avoid mutation bugs
   const idx = arr.indexOf(label);
   if (idx > -1) {
-    arr.splice(idx, 1);
+    arr.splice(idx, 1);                          // deselect
   } else if (arr.length < maxSelect) {
-    arr.push(label);
+    arr.push(label);                             // select
   } else {
-    toast(`בחר עד ${maxSelect} אפשרויות`); return;
+    toast(`ניתן לבחור עד ${maxSelect} אפשרויות`);
+    return;                                      // blocked — don't touch existing selections
   }
   obAnswers[stepId] = arr;
   renderObStep();
 }
+
+// One-time delegated listener for onboarding option cards
+document.getElementById('ob-overlay').addEventListener('click', function(e) {
+  const card = e.target.closest('.ob-card:not(.ob-other)');
+  if (!card || !card.dataset.stepid) return;
+  obToggleOption(card.dataset.stepid, card.dataset.label, parseInt(card.dataset.maxselect, 10));
+});
 
 function obActivateOther(stepId) {
   const step = OB_STEPS.find(s => s.id === stepId);
