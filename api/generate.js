@@ -53,60 +53,21 @@ export default async function handler(req, res) {
     ? Math.round(charTarget * 0.93)
     : Math.round(charTarget * 0.85);
   const lengthMap = {
-    short:  `קצר — חייב להיות בין ${minTarget} ל-${charTarget} תווים. משפט פותח חזק + משפט סיכום. אם כתבת פחות מ-${minTarget} תווים — הוסף פרט או נתון.`,
-    medium: `בינוני — חייב להיות בין ${minTarget} ל-${charTarget} תווים. פתיחה חזקה + 2-3 משפטי גוף + סיום. אם כתבת פחות מ-${minTarget} תווים — הרחב עם דוגמה או נתון נוסף.`,
-    long:   `ארוך — מינימום ${minTarget} תווים, מקסימום ${charTarget} תווים.
-לפני שאתה כותב hashtags: ספור את אורך הפוסט שכתבת עד כה.
-אם פחות מ-${minTarget} תווים — אל תסיים עדיין. הוסף משפט נוסף, נתון, דוגמה או הרחבה. חזור לספור.
-רק כשהגעת ל-${minTarget}+ תווים — הוסף hashtags וסיים.`
+    short:  `קצר — ${minTarget}–${charTarget} תווים. פתיחה חזקה + סיכום.`,
+    medium: `בינוני — ${minTarget}–${charTarget} תווים. פתיחה + 2-3 משפטי גוף + סיום.`,
+    long:   `ארוך — ${minTarget}–${charTarget} תווים. לפני hashtags: ספור תווים — אם פחות מ-${minTarget} הוסף עוד תוכן. רק אחרי ${minTarget}+ תווים — hashtags וסיום.`
   };
 
   const formatInstructions = {
-    // מספר פסקאות נדרש לפי אורך (לפי פלטפורמה)
-    hook: length !== 'long' ? `פורמט: HOOK — פתיחת עצירה
-השורה הראשונה חייבת לעצור גלילה. השתמש באחת מהגישות:
-• "X% מהמשקיעים לא יודעים ש..."
-• "הדבר היחיד שלמדתי אחרי X שנים בשוק:"
-• "הטעות שעלתה לי X ש' — ומה שלמדתי"
-המשך: תובנה מפתיעה קצרה + נקודת מבט חדשה.
-סיים עם שאלה קצרה שמעוררת מעורבות ("מה דעתכם?" / "גם אתם חשתם כך?").`
-    : `פורמט: HOOK ארוך:
-שורה 1: hook שעוצר גלילה — נתון/שאלה מפתיעה.
-גוף: 3-4 משפטים עמוסים — תובנה, נתון ספציפי ממחקר, דוגמה מהשוק, מה המשמעות.
-סיום: שאלה לדיון + 2-3 hashtags.
-⚠️ חובה: לפני hashtags ספור תווים — אם פחות מ-${minTarget} הוסף עוד משפט.`,
+    hook: `HOOK — שורה 1 עוצרת גלילה ("X% לא יודעים ש..." / "הטעות שעלתה לי X ש'"). תובנה + זווית חדשה. סיים בשאלה.${length === 'long' ? ` ⚠️ לפני hashtags: ספור תווים — אם פחות מ-${minTarget} הוסף משפט.` : ''}`,
 
-    hottake: `פורמט: HOT TAKE — דעה שמחלקת
-פתח ב"דעה לא פופולרית:" או "אמת שאף אחד לא אומר:".
-הצג עמדה שמאתגרת קונבנציה מקובלת — עם לוגיקה, לא סתם פרובוקציה.
-סיים עם שאלה פתוחה לתגובות.`,
+    hottake: `HOT TAKE — פתח ב"דעה לא פופולרית:" או "אמת שאף אחד לא אומר:". עמדה שמאתגרת קונבנציה עם לוגיקה. סיים בשאלה.`,
 
-    story: length !== 'long' ? `פורמט: STORY — סיפור אישי בגוף ראשון
-מבנה: מצב → מה קרה → מה למדתי.
-כתוב בגוף ראשון ("אני", "שלי"). השתמש במספרים ספציפיים.
-פרטים אמיתיים (תאריכים, סכומים) הופכים סיפור לאמין.
-חובה לסיים עם לקח מעשי + שאלה קצרה לקהל ("מה אתכם?").`
-    : `פורמט: STORY ארוך — סיפור אישי בגוף ראשון:
-פתיחה (~${Math.round(minTarget*0.2)} תווים): רקע + מספרים ספציפיים.
-גוף (~${Math.round(minTarget*0.55)} תווים): בעיה → רגע מכריע עם תאריך/סכום → תוצאה לפני vs אחרי.
-סיום (~${Math.round(minTarget*0.25)} תווים): לקח + שאלה לקהל + 2-3 hashtags.
-ספור לפני סיום — חייב להגיע ל-${minTarget} תווים. חייב לסיים ב-"?".`,
+    story: `STORY — גוף ראשון. מבנה: מצב → מה קרה → לקח. מספרים ספציפיים (תאריכים, סכומים). לקח מעשי + שאלה.${length === 'long' ? ` ⚠️ ספור לפני סיום — חייב ${minTarget}+ תווים.` : ''}`,
 
-    datadrop: `פורמט: DATA DROP — עובדה שמזעזעת
-שורה 1: סטטיסטיקה/אחוז/עובדה מפתיעה וספציפית.
-${length === 'long'
-  ? `גוף (~${Math.round(minTarget*0.55)} תווים): מה זה אומר למשקיע + הרחבה עם דוגמה + נתון שני מתקשר.
-ספור לפני סיום — חייב להגיע ל-${minTarget} תווים לפני hashtags.`
-  : 'שורה 2: מה זה אומר למשקיע הממוצע?'}
-סיים עם שאלה קצרה שמעוררת מעורבות + hashtags.`,
+    datadrop: `DATA DROP — שורה 1: סטטיסטיקה/עובדה מפתיעה.${length === 'long' ? ` גוף: מה זה אומר + דוגמה + נתון שני. ⚠️ ${minTarget}+ תווים לפני hashtags.` : ' שורה 2: מה זה אומר למשקיע?'} שאלה + hashtags.`,
 
-    tips: `פורמט: LIST — רשימת ערך מעשי
-${length === 'short'
-  ? 'כותרת: "3 דברים ש[תובנה חכמה]:" — כתוב 3 פריטים ממוספרים. כל סעיף = מספר + משפט אחד תמציתי.'
-  : length === 'long'
-  ? 'כותרת: "[מספר] דברים ש[תובנה חכמה]:" — כתוב כמה פריטים שמתאים למקום (5-7). כל סעיף = מספר + משפט ראשי + משפט הסבר/דוגמה.'
-  : 'כותרת: "5 דברים ש[תובנה חכמה]:" — כתוב 5 פריטים ממוספרים. כל סעיף = מספר + משפט ראשי + ביטוי מחדד קצר.'}
-סיים עם שאלה קצרה שמעוררת מעורבות.`
+    tips: `LIST — כותרת "${length === 'short' ? '3' : length === 'long' ? '5-7' : '5'} דברים ש[תובנה]:" — פריטים ממוספרים.${length === 'short' ? ' כל סעיף: מספר + משפט.' : ' כל סעיף: מספר + משפט + ביטוי מחדד.'} שאלה בסוף.`
   };
 
   const prompt = `אתה יוצר תוכן ויראלי בתחום ${hasIdentity ? identity.field : 'AI ופיננסים'}.
@@ -120,26 +81,24 @@ ${length === 'short'
 ${formatInstructions[format] || formatInstructions.hook}
 
 חוקי ברזל:
-✅ אורך מחייב: בין ${minTarget} ל-${charTarget} תווים — לא פחות, לא יותר${length === 'long' ? `
-✅ לפני שאתה מסיים — ספור את התווים. אם פחות מ-${minTarget}: הוסף פסקה נוספת, נתון, דוגמה, או הרחבה
-✅ סיום חובה: שאלה לדיון ("מה דעתכם?", "גם אתם...?") או הנעה ברורה לפעולה` : ''}
-✅ השתמש בנתונים מהידע שלך — סטטיסטיקות אמיתיות ממחקרים וחברות ידועות
-✅ אם יש מקור לנתון (חברה, דוח, מחקר) — ציין אותו בתוך הפוסט
-✅ שורה ראשונה — עוצרת גלילה, חייבת להיות חזקה
-✅ עברית בלבד, RTL
-✅ 2-3 hashtags רלוונטיים בסוף
+✅ ${minTarget}–${charTarget} תווים${length === 'long' ? ` — ספור לפני סיום. אם פחות מ-${minTarget}: הוסף עוד. סיים בשאלה לדיון.` : ''}
+✅ נתונים אמיתיים — ציין מקור (חברה/דוח) בתוך הטקסט
+✅ שורה ראשונה עוצרת גלילה
+✅ עברית בלבד — מותר: שמות מותגים, AI/IPO/GDP, hashtags. תרגם הכל שאר
+✅ 2-3 hashtags בסוף
 
-❌ אל תמציא אחוזים או נתונים שאינך בטוח בהם
-❌ אל תתחיל ב"בעולם של..." / "בעידן ה-AI..." — קלישאה
-❌ אל תכתוב "חשוב לזכור" / "כדאי לציין" — משעמם
-❌ אל תוסיף הסברים, הקדמות או מרכאות — רק הפוסט`;
+❌ אל תכתוב מילים אנגליות רגילות — תרגם: "חשיפה" לא "exposure", "ניהול" לא "management"
+❌ אל תמציא נתונים
+❌ אל תתחיל ב"בעולם של..." / "בעידן ה-AI..."
+❌ אל תכתוב "חשוב לזכור" / "כדאי לציין"
+❌ אל תוסיף הסברים — רק הפוסט`;
 
   const systemPrompt = `אתה כותב תוכן עברי לרשתות חברתיות${hasIdentity && identity.voiceWords ? ` בסגנון: ${identity.voiceWords}` : ''}. כללים שאסור לשבור:
-1. כתוב רק עברית — אפשר מילות מפתח באנגלית (שמות חברות, מושגים), אבל כל המשפטים בעברית.
+1. עברית בלבד — מותר: שמות מותגים (McKinsey, OpenAI), ראשי תיבות (AI, IPO, GDP), hashtags. כל שאר המילים: עברית בלבד. אסור: מילים אנגליות רגילות כמו "institutional", "exposure", "intensive".
 2. אסור לחרוג מ-${hardLimit} תווים כולל הכל.
-3. כתוב את כל הפסקאות הנדרשות ברצף — ללא כותרות, תוויות בסוגריים, או סימנים מיוחדים לפני פסקה.
-4. אם ברשימה ממוספרת כתבת את הסעיף האחרון — חובה לסיים את הסעיף המלא לפני הוספת hashtags.
-5. בפוסט ארוך (long): חובה להגיע לפחות ${minTarget} תווים — אם קצר מזה, הוסף פרט, נתון, או הרחבה.`;
+3. כתוב ברצף — ללא כותרות, תוויות בסוגריים, או סימנים לפני פסקה.
+4. ברשימה ממוספרת — סיים את הסעיף האחרון לפני hashtags.
+5. בפוסט ארוך: הגע לפחות ${minTarget} תווים — אם קצר מזה, הוסף פרט או הרחבה.`;
 
   // ── Helper: clean raw model text → final post ─────────────────────────────
   function cleanPost(text) {
@@ -266,32 +225,31 @@ ${formatInstructions[format] || formatInstructions.hook}
     };
   }
 
-  // ── Main: Cerebras → Groq → Gemini ───────────────────────────────────────
+  // ── Main: Groq → Cerebras → Gemini ───────────────────────────────────────
   try {
     let text = null;
     let provider = '?';
 
-    // 1. Cerebras — primary (1M tokens/day, Qwen 3 235B)
-    const cerebrasResult = await tryCerebras();
-    if (cerebrasResult.text) {
-      text = cerebrasResult.text;
-      provider = 'Cerebras';
-    } else if (!cerebrasResult.fallThrough) {
-      // Hard auth failure — no point trying other providers with same key issues
-      return res.status(502).json({ error: `שגיאת AI (Cerebras): ${cerebrasResult.error}` });
+    // 1. Groq — primary (100K tokens/day, Llama 3.3 70B — best Hebrew)
+    const groqResult = await tryGroq();
+    if (groqResult.text) {
+      text = groqResult.text;
+      provider = 'Groq';
+    } else if (!groqResult.rateLimited && process.env.GROQ_API_KEY) {
+      return res.status(502).json({ error: `שגיאת AI (Groq): ${groqResult.error}` });
     } else {
-      console.log('Cerebras unavailable, falling back:', cerebrasResult.error);
+      console.log('Groq unavailable, falling back:', groqResult.error);
     }
 
-    // 2. Groq — fallback 1 (100K tokens/day, Llama 3.3 70B)
+    // 2. Cerebras — fallback 1 (1M tokens/day, Qwen 3 235B)
     if (!text) {
-      console.log('Falling back to Groq');
-      const groqResult = await tryGroq();
-      if (groqResult.text) {
-        text = groqResult.text;
-        provider = 'Groq';
-      } else if (!groqResult.rateLimited && process.env.GROQ_API_KEY) {
-        return res.status(502).json({ error: `שגיאת AI (Groq): ${groqResult.error}` });
+      console.log('Falling back to Cerebras');
+      const cerebrasResult = await tryCerebras();
+      if (cerebrasResult.text) {
+        text = cerebrasResult.text;
+        provider = 'Cerebras';
+      } else if (!cerebrasResult.fallThrough) {
+        return res.status(502).json({ error: `שגיאת AI (Cerebras): ${cerebrasResult.error}` });
       }
     }
 

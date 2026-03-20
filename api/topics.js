@@ -70,8 +70,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const raw = await callProvider(tryCerebras)
-      || await callProvider(tryGroq)
+    const raw = await callProvider(tryGroq)
+      || await callProvider(tryCerebras)
       || await callProvider(tryGemini);
 
     if (!raw) return res.status(502).json({ error: 'לא התקבלה תשובה מה-AI' });
