@@ -779,7 +779,7 @@
     #ob-other-input:focus { outline: none; }
     #ob-nav { display: flex; gap: 12px; }
     #ob-close-btn {
-      position: absolute; top: max(env(safe-area-inset-top, 0px), 14px); left: 14px;
+      position: absolute; top: max(env(safe-area-inset-top, 0px), 14px); right: 14px;
       width: 34px; height: 34px; border-radius: 50%;
       background: var(--surface2); border: 1px solid var(--border);
       color: var(--text-muted); font-size: 16px; cursor: pointer;
@@ -1340,7 +1340,7 @@ function renderObSummary() {
       <div class="ob-title">נראה טוב!</div>
       <div class="ob-subtitle">ככה ייראה הקול שלך</div>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:10px">
       ${OB_STEPS.map(step => {
         const vals = (obAnswers[step.id] || []).filter(v => v); // remove empty markers
         const display = vals.length ? vals.join(' · ') : '—';
