@@ -180,7 +180,7 @@
       color: var(--text-muted);
     }
 
-    textarea, input[type="text"] {
+    textarea, input[type="text"], input[type="search"], input[type="datetime-local"] {
       width: 100%;
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -194,7 +194,7 @@
       direction: rtl;
     }
 
-    textarea:focus, input[type="text"]:focus {
+    textarea:focus, input[type="text"]:focus, input[type="search"]:focus, input[type="datetime-local"]:focus {
       outline: none;
       border-color: var(--accent);
     }
@@ -883,23 +883,23 @@
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">תחום / נישה</label>
-          <input id="id-field" type="text" placeholder="פיננסים, שיווק, נדל&quot;ן, בריאות..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+          <input id="id-field" type="text" placeholder="פיננסים, שיווק, נדל&quot;ן, בריאות..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
         </div>
         <div>
           <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">מי אתה</label>
-          <input id="id-role" type="text" placeholder="יועץ, יזם, רופא, מאמן עסקי..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+          <input id="id-role" type="text" placeholder="יועץ, יזם, רופא, מאמן עסקי..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
         </div>
         <div>
           <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">קהל היעד שלך</label>
-          <input id="id-audience" type="text" placeholder="משקיעים מתחילים, מנהלי שיווק, יזמים..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+          <input id="id-audience" type="text" placeholder="משקיעים מתחילים, מנהלי שיווק, יזמים..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
         </div>
         <div>
           <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">3 מילות סגנון <span style="color:var(--text-muted);font-weight:400">(מה מאפיין אותך)</span></label>
-          <input id="id-voice" type="text" placeholder="חינוכי, ישיר, מבוסס-נתונים" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+          <input id="id-voice" type="text" placeholder="חינוכי, ישיר, מבוסס-נתונים" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
         </div>
         <div>
           <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">מה אתה לא <span style="color:var(--text-muted);font-weight:400">(אופציונלי)</span></label>
-          <input id="id-not" type="text" placeholder="לא רדוד, לא קלישאות, לא שיפוטי" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:inherit;direction:rtl" />
+          <input id="id-not" type="text" placeholder="לא רדוד, לא קלישאות, לא שיפוטי" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
         </div>
       </div>
 
@@ -1915,7 +1915,7 @@ function schedulePost(historyId) {
       </div>
       <input type="datetime-local" id="schedule-dt" value="${defaultVal}"
         style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);
-               border-radius:var(--radius-sm);color:var(--text);font-size:14px;margin-bottom:14px;
+               border-radius:var(--radius-sm);color:var(--text);font-size:16px;margin-bottom:14px;
                font-family:inherit" />
       <div style="display:flex;gap:8px">
         <button class="btn-sm" style="flex:1;padding:10px;background:var(--accent);color:#fff;border-color:transparent"
