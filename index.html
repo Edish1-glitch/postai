@@ -732,6 +732,69 @@
     }
     @keyframes ptr-spin { to { transform: rotate(360deg); } }
     #ptr-icon.spin { animation: ptr-spin .5s linear infinite; }
+
+    /* ── Onboarding ──────────────────────────────────────────────────────── */
+    #ob-overlay {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 20000;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: max(env(safe-area-inset-top), 20px) 16px max(env(safe-area-inset-bottom), 20px);
+      overflow-y: auto;
+    }
+    #ob-inner {
+      width: 100%; max-width: 440px;
+      display: flex; flex-direction: column; gap: 20px;
+      padding-bottom: 20px; min-height: 100%;
+    }
+    #ob-progress-bar-wrap { background: var(--border); border-radius: 999px; height: 4px; }
+    #ob-progress-bar { background: var(--accent); height: 4px; border-radius: 999px; transition: width .35s ease; width: 0%; }
+    #ob-dots { display: flex; justify-content: center; gap: 8px; }
+    .ob-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all .25s; }
+    .ob-dot.active { background: var(--accent); transform: scale(1.35); }
+    .ob-dot.done { background: var(--accent); opacity: .4; }
+    .ob-title { font-size: 22px; font-weight: 700; text-align: center; line-height: 1.3; }
+    .ob-subtitle { font-size: 14px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+    .ob-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ob-card {
+      background: var(--surface); border: 2px solid var(--border);
+      border-radius: var(--radius); padding: 16px 10px;
+      cursor: pointer; transition: var(--transition);
+      text-align: center; font-size: 13px; font-weight: 500; color: var(--text);
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      -webkit-tap-highlight-color: transparent; user-select: none;
+    }
+    .ob-card .ob-card-icon { font-size: 28px; line-height: 1; }
+    .ob-card:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .ob-card.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .ob-card.ob-other { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 8px; padding: 14px; }
+    #ob-other-input {
+      width: 100%; padding: 12px 14px;
+      background: var(--surface2); border: 1.5px solid var(--accent);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 16px; font-family: inherit; direction: rtl;
+    }
+    #ob-other-input:focus { outline: none; }
+    #ob-nav { display: flex; gap: 12px; }
+    #ob-back-btn {
+      flex: 1; padding: 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text-muted); font-size: 15px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: var(--transition);
+    }
+    #ob-back-btn:hover { border-color: var(--accent); color: var(--text); }
+    #ob-next-btn {
+      flex: 2; padding: 14px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border: none; border-radius: var(--radius);
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: opacity var(--transition);
+    }
+    #ob-next-btn:hover { opacity: .9; }
+    .ob-summary-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .ob-summary-row:last-child { border-bottom: none; }
+    .ob-summary-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; min-width: 55px; padding-top: 2px; }
+    .ob-summary-value { font-size: 13px; font-weight: 500; flex: 1; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -782,7 +845,7 @@
     </div>
 
     <!-- Identity banner — visible only when no identity card is set -->
-    <div id="identity-banner" class="card" style="border:1px dashed var(--accent);background:var(--accent-dim);display:none;cursor:pointer" onclick="showTab('settings');setTimeout(()=>document.getElementById('identity-form-card').scrollIntoView({behavior:'smooth'}),120)">
+    <div id="identity-banner" class="card" style="border:1px dashed var(--accent);background:var(--accent-dim);display:none;cursor:pointer" onclick="startOnboarding()">
       <div style="display:flex;align-items:center;gap:12px">
         <div style="font-size:26px">🪪</div>
         <div style="flex:1">
@@ -912,37 +975,12 @@
     <div class="settings-title">⚙️ הגדרות</div>
 
     <!-- Identity Card -->
-    <div class="card" id="identity-form-card">
+    <div class="card" id="identity-display-card">
       <div class="card-title">🪪 כרטיס זהות — הקול שלך</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">שמור פעם אחת — יוחל אוטומטית על כל פוסט.</div>
-
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">תחום / נישה</label>
-          <input id="id-field" type="text" placeholder="פיננסים, שיווק, נדל&quot;ן, בריאות..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
-        </div>
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">מי אתה</label>
-          <input id="id-role" type="text" placeholder="יועץ, יזם, רופא, מאמן עסקי..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
-        </div>
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">קהל היעד שלך</label>
-          <input id="id-audience" type="text" placeholder="משקיעים מתחילים, מנהלי שיווק, יזמים..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
-        </div>
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">3 מילות סגנון <span style="color:var(--text-muted);font-weight:400">(מה מאפיין אותך)</span></label>
-          <input id="id-voice" type="text" placeholder="חינוכי, ישיר, מבוסס-נתונים" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
-        </div>
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">מה אתה לא <span style="color:var(--text-muted);font-weight:400">(אופציונלי)</span></label>
-          <input id="id-not" type="text" placeholder="לא רדוד, לא קלישאות, לא שיפוטי" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:inherit;direction:rtl" />
-        </div>
-      </div>
-
-      <button onclick="saveIdentityForm()" style="width:100%;margin-top:16px;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:white;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s">
-        💾 שמור כרטיס זהות
+      <div id="identity-display-content" style="margin-bottom:14px"></div>
+      <button onclick="startOnboarding()" style="width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">
+        ✏️ ערוך זהות
       </button>
-      <div id="identity-saved-msg" style="display:none;text-align:center;margin-top:10px;color:var(--success);font-size:13px">✅ הכרטיס נשמר — יוחל על כל הפוסטים הבאים</div>
     </div>
 
     <div class="card">
@@ -1041,6 +1079,19 @@
 
 <div id="toast"></div>
 
+<!-- ── Onboarding Overlay ─────────────────────────────────────────────────── -->
+<div id="ob-overlay" style="display:none">
+  <div id="ob-inner">
+    <div id="ob-progress-bar-wrap"><div id="ob-progress-bar"></div></div>
+    <div id="ob-dots"></div>
+    <div id="ob-content"></div>
+    <div id="ob-nav">
+      <button id="ob-back-btn" onclick="obBack()">← חזור</button>
+      <button id="ob-next-btn" onclick="obNext()">הבא →</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -1058,6 +1109,221 @@ const state = {
 const PLATFORM_LIMITS = { twitter: 280, threads: 500, linkedin: 700 };
 const STORAGE_KEY = 'postai_history_v2';
 const IDENTITY_KEY = 'postai_identity_v1';
+
+// ═══════════════════════════════════════════════════════════════
+// ONBOARDING — DATA
+// ═══════════════════════════════════════════════════════════════
+const OB_STEPS = [
+  { id: 'field', emoji: '🎯', title: 'מה התחום שלך?', subtitle: 'בחר עד 4 שמתאימים לך', multi: true, maxSelect: 4,
+    options: [
+      { icon: '📈', label: 'פיננסים והשקעות' }, { icon: '📣', label: 'שיווק ומיתוג' },
+      { icon: '💻', label: 'טכנולוגיה וסטארטאפים' }, { icon: '🏠', label: 'נדל"ן' },
+      { icon: '💪', label: 'בריאות וכושר' }, { icon: '💼', label: 'עסקים ואסטרטגיה' },
+    ]
+  },
+  { id: 'role', emoji: '👤', title: 'מי אתה?', subtitle: 'בחר עד 4 שמתאימים לך', multi: true, maxSelect: 4,
+    options: [
+      { icon: '📊', label: 'משקיע / טריידר' }, { icon: '🚀', label: 'יזם' },
+      { icon: '🤝', label: 'יועץ / מנטור' }, { icon: '✍️', label: 'יוצר תוכן' },
+      { icon: '🏢', label: 'מנהל בכיר' }, { icon: '🎓', label: 'מומחה / אקדמאי' },
+    ]
+  },
+  { id: 'audience', emoji: '👥', title: 'מי הקהל שלך?', subtitle: 'בחר עד 4 שמתאימים לך', multi: true, maxSelect: 4,
+    options: [
+      { icon: '🌱', label: 'מתחילים בתחום' }, { icon: '📈', label: 'משקיעים ואנשי כסף' },
+      { icon: '🚀', label: 'יזמים ומנהלים' }, { icon: '💻', label: 'אנשי טכנולוגיה' },
+      { icon: '🌍', label: 'קהל רחב' }, { icon: '🏆', label: 'מקצוענים בתחום' },
+    ]
+  },
+  { id: 'voiceWords', emoji: '🖊️', title: 'איך אתה כותב?', subtitle: 'בחר עד 4 שמתאימים לך', multi: true, maxSelect: 4,
+    options: [
+      { icon: '📊', label: 'מבוסס-נתונים' }, { icon: '💡', label: 'חינוכי' },
+      { icon: '🔥', label: 'ישיר וחד' }, { icon: '😊', label: 'שיחתי' },
+      { icon: '🎓', label: 'אקדמי' }, { icon: '⚡', label: 'השראתי' },
+    ]
+  },
+  { id: 'notWords', emoji: '🚫', title: 'מה אתה לא?', subtitle: 'בחר עד 4 (אופציונלי)', multi: true, maxSelect: 4, optional: true,
+    options: [
+      { icon: '🙅', label: 'לא רדוד' }, { icon: '🛒', label: 'לא מוכר' },
+      { icon: '⚖️', label: 'לא שיפוטי' }, { icon: '🎭', label: 'לא קלישאות' },
+      { icon: '📢', label: 'לא צעקני' }, { icon: '🤓', label: "לא ז'רגון" },
+    ]
+  },
+];
+
+let obStep = 0;
+let obAnswers = { field: [], role: [], audience: [], voiceWords: [], notWords: [] };
+
+// ── Onboarding Functions ──────────────────────────────────────────────────
+function startOnboarding() {
+  const id = getIdentity();
+  if (id) {
+    obAnswers = {
+      field:      id.field      ? id.field.split(', ')      : [],
+      role:       id.role       ? id.role.split(', ')       : [],
+      audience:   id.audience   ? id.audience.split(', ')   : [],
+      voiceWords: id.voiceWords ? id.voiceWords.split(', ') : [],
+      notWords:   id.notWords   ? id.notWords.split(', ')   : [],
+    };
+  } else {
+    obAnswers = { field: [], role: [], audience: [], voiceWords: [], notWords: [] };
+  }
+  obStep = 0;
+  document.getElementById('ob-overlay').style.display = 'flex';
+  renderObStep();
+}
+
+function closeOnboarding() {
+  document.getElementById('ob-overlay').style.display = 'none';
+}
+
+function renderObStep() {
+  const isSummary = obStep === OB_STEPS.length;
+  const total = OB_STEPS.length;
+
+  // Progress
+  const pct = isSummary ? 100 : Math.round(obStep / total * 100);
+  document.getElementById('ob-progress-bar').style.width = pct + '%';
+
+  // Dots
+  document.getElementById('ob-dots').innerHTML = OB_STEPS.map((_, i) =>
+    `<div class="ob-dot ${i < obStep ? 'done' : i === obStep && !isSummary ? 'active' : ''}"></div>`
+  ).join('');
+
+  // Nav
+  document.getElementById('ob-back-btn').style.display = obStep === 0 ? 'none' : '';
+  const isLastReal = obStep === total - 1;
+  document.getElementById('ob-next-btn').textContent =
+    isSummary ? '🚀 התחל ליצור!' :
+    (isLastReal && OB_STEPS[obStep].optional ? 'הבא →' : 'הבא →');
+
+  if (isSummary) { renderObSummary(); return; }
+
+  const step = OB_STEPS[obStep];
+  const currentVals = obAnswers[step.id] || [];
+  // "Other" is active when there are values not matching any predefined option
+  const isOtherActive = currentVals.some(v => !step.options.find(o => o.label === v));
+  const otherVals = currentVals.filter(v => !step.options.find(o => o.label === v));
+
+  document.getElementById('ob-content').innerHTML = `
+    <div style="text-align:center">
+      <div style="font-size:44px;margin-bottom:10px">${step.emoji}</div>
+      <div class="ob-title">${step.title}</div>
+      <div class="ob-subtitle">${step.subtitle}</div>
+    </div>
+    <div class="ob-options">
+      ${step.options.map(opt => {
+        const sel = currentVals.includes(opt.label);
+        const safeLabel = opt.label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return `<div class="ob-card ${sel ? 'selected' : ''}" onclick="obToggleOption('${step.id}','${safeLabel}',${step.maxSelect})">
+          <div class="ob-card-icon">${opt.icon}</div>
+          <div>${opt.label}</div>
+        </div>`;
+      }).join('')}
+      <div class="ob-card ob-other ${isOtherActive ? 'selected' : ''}" onclick="obActivateOther('${step.id}')">
+        <span>✍️</span><span>אחר / הכנס ידנית</span>
+      </div>
+    </div>
+    ${isOtherActive ? `<input id="ob-other-input" type="text" placeholder="הכנס ידנית (אפשר כמה, מופרדים בפסיק)" value="${otherVals.join(', ')}" oninput="obOtherChange('${step.id}')" />` : ''}
+  `;
+  if (isOtherActive) setTimeout(() => document.getElementById('ob-other-input')?.focus(), 50);
+}
+
+function obToggleOption(stepId, label, maxSelect) {
+  const arr = obAnswers[stepId] || [];
+  const idx = arr.indexOf(label);
+  if (idx > -1) {
+    arr.splice(idx, 1);
+  } else if (arr.length < maxSelect) {
+    arr.push(label);
+  } else {
+    toast(`בחר עד ${maxSelect} אפשרויות`); return;
+  }
+  obAnswers[stepId] = arr;
+  renderObStep();
+}
+
+function obActivateOther(stepId) {
+  const step = OB_STEPS.find(s => s.id === stepId);
+  // Keep predefined selections, just show the "other" input
+  const arr = obAnswers[stepId] || [];
+  // If no other values yet, add a placeholder to trigger input display
+  const hasOther = arr.some(v => !step.options.find(o => o.label === v));
+  if (!hasOther) {
+    // Add an empty marker so isOtherActive becomes true
+    obAnswers[stepId] = [...arr, ''];
+  }
+  renderObStep();
+}
+
+function obOtherChange(stepId) {
+  const val = document.getElementById('ob-other-input')?.value || '';
+  const step = OB_STEPS.find(s => s.id === stepId);
+  const predefined = (obAnswers[stepId] || []).filter(v => step.options.find(o => o.label === v));
+  const manualVals = val.split(',').map(v => v.trim()).filter(Boolean);
+  // Always keep at least [''] to keep "other" mode active even if field is empty
+  obAnswers[stepId] = [...predefined, ...(manualVals.length ? manualVals : [''])];
+}
+
+function renderObSummary() {
+  const labels = { field: '🎯 תחום', role: '👤 תפקיד', audience: '👥 קהל', voiceWords: '🖊️ סגנון', notWords: '🚫 לא' };
+  document.getElementById('ob-content').innerHTML = `
+    <div style="text-align:center">
+      <div style="font-size:44px;margin-bottom:10px">🎉</div>
+      <div class="ob-title">נראה טוב!</div>
+      <div class="ob-subtitle">ככה ייראה הקול שלך</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      ${OB_STEPS.map(step => {
+        const vals = (obAnswers[step.id] || []).filter(v => v); // remove empty markers
+        const display = vals.length ? vals.join(' · ') : '—';
+        return `<div class="ob-summary-row">
+          <div class="ob-summary-label">${labels[step.id]}</div>
+          <div class="ob-summary-value">${display}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function obNext() {
+  if (obStep === OB_STEPS.length) { obFinish(); return; }
+
+  // Flush "other" input before advancing
+  const otherEl = document.getElementById('ob-other-input');
+  if (otherEl) obOtherChange(OB_STEPS[obStep].id);
+
+  const step = OB_STEPS[obStep];
+  const realVals = (obAnswers[step.id] || []).filter(v => v); // strip empty markers
+  if (realVals.length === 0 && !step.optional) {
+    toast('בחר לפחות אפשרות אחת כדי להמשיך');
+    return;
+  }
+  // Strip empty markers before advancing
+  obAnswers[step.id] = realVals;
+  obStep++;
+  renderObStep();
+}
+
+function obBack() {
+  if (obStep === 0) return;
+  obStep--;
+  renderObStep();
+}
+
+function obFinish() {
+  const clean = id => (obAnswers[id] || []).filter(v => v).join(', ');
+  const identity = {
+    field: clean('field'), role: clean('role'), audience: clean('audience'),
+    voiceWords: clean('voiceWords'), notWords: clean('notWords'),
+  };
+  saveIdentity(identity);
+  closeOnboarding();
+  checkIdentityBanner();
+  renderIdentityDisplay();
+  toast('✅ כרטיס זהות נשמר!');
+  showTab('create');
+}
 
 const ANGLE_DESC = {
   analysis: 'מביא נתון → בונה טיעון → מסיק מסקנה חדה',
@@ -1107,7 +1373,7 @@ function showTab(name) {
 
   if (name === 'history') renderHistory();
   if (name === 'favorites') renderFavorites();
-  if (name === 'settings') { renderPushStatus(); updateStorageInfo(); renderXStatus(); loadIdentityForm(); }
+  if (name === 'settings') { renderPushStatus(); updateStorageInfo(); renderXStatus(); renderIdentityDisplay(); }
 }
 
 // Init create section visibility
@@ -1171,33 +1437,25 @@ function saveIdentity(identity) {
   localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
 }
 
-function loadIdentityForm() {
+function renderIdentityDisplay() {
+  const el = document.getElementById('identity-display-content');
+  if (!el) return;
   const id = getIdentity();
-  if (!id) return;
-  document.getElementById('id-field').value    = id.field      || '';
-  document.getElementById('id-role').value     = id.role       || '';
-  document.getElementById('id-audience').value = id.audience   || '';
-  document.getElementById('id-voice').value    = id.voiceWords || '';
-  document.getElementById('id-not').value      = id.notWords   || '';
-}
-
-function saveIdentityForm() {
-  const identity = {
-    field:      document.getElementById('id-field').value.trim(),
-    role:       document.getElementById('id-role').value.trim(),
-    audience:   document.getElementById('id-audience').value.trim(),
-    voiceWords: document.getElementById('id-voice').value.trim(),
-    notWords:   document.getElementById('id-not').value.trim()
-  };
-  if (!identity.field && !identity.role) {
-    toast('✍️ הכנס לפחות תחום ומי אתה');
+  if (!id || (!id.field && !id.role)) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px">לא הוגדר עדיין — לחץ "ערוך זהות" כדי להתחיל</div>';
     return;
   }
-  saveIdentity(identity);
-  document.getElementById('identity-saved-msg').style.display = 'block';
-  setTimeout(() => { document.getElementById('identity-saved-msg').style.display = 'none'; }, 3000);
-  toast('✅ כרטיס זהות נשמר!');
-  checkIdentityBanner();
+  const rows = [
+    { label: 'תחום', val: id.field }, { label: 'מי אתה', val: id.role },
+    { label: 'קהל', val: id.audience }, { label: 'סגנון', val: id.voiceWords },
+    { label: 'לא', val: id.notWords },
+  ].filter(r => r.val);
+  el.innerHTML = rows.map(r =>
+    `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span style="color:var(--text-muted);min-width:55px">${r.label}</span>
+      <span>${r.val}</span>
+    </div>`
+  ).join('');
 }
 
 function checkIdentityBanner() {
@@ -2312,6 +2570,9 @@ checkXQueue();
 checkIdentityBanner();
 refreshSuggestions();
 updateHistoryBadge();
+
+// Auto-launch onboarding on first visit
+if (!getIdentity()) startOnboarding();
 
 // ── Pull-to-refresh ───────────────────────────────────────────────────────
 (function () {
