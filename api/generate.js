@@ -46,7 +46,7 @@ export default async function handler(req, res) {
   // Identity DNA — injected when user has set up their profile
   const hasIdentity = identity && (identity.field || identity.role);
   const identityDNA = hasIdentity
-    ? `\nהכותב: ${identity.role || 'יוצר תוכן'} בתחום ${identity.field || 'כללי'}.קהל: ${identity.audience || 'קהל רחב'}.סגנון: ${identity.voiceWords || 'מקצועי'}.${identity.notWords ? `\nלא: ${identity.notWords}.` : ''}`
+    ? `\nהכותב: ${identity.role || 'יוצר תוכן'} בתחום ${identity.field || 'כללי'}.קהל: ${identity.audience || 'קהל רחב'}.סגנון: ${identity.voiceWords || 'מקצועי'}.${identity.goal ? `\nמטרה: ${identity.goal}.` : ''}`
     : '';
 
   const minTarget = length === 'long'

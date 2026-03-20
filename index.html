@@ -778,6 +778,25 @@
     }
     #ob-other-input:focus { outline: none; }
     #ob-nav { display: flex; gap: 12px; }
+    #ob-close-btn {
+      position: absolute; top: max(env(safe-area-inset-top, 0px), 14px); left: 14px;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; z-index: 2;
+      transition: var(--transition); -webkit-tap-highlight-color: transparent;
+    }
+    #ob-close-btn:hover { border-color: var(--accent); color: var(--text); }
+    #ob-confirm-overlay {
+      position: absolute; inset: 0; z-index: 10;
+      background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; padding: 28px;
+    }
+    #ob-confirm-box {
+      background: var(--surface); border: 1.5px solid #ef4444;
+      border-radius: var(--radius); padding: 28px 22px; max-width: 360px;
+      width: 100%; text-align: center;
+    }
     #ob-back-btn {
       flex: 1; padding: 14px; background: var(--surface);
       border: 1px solid var(--border); border-radius: var(--radius);
@@ -1083,6 +1102,7 @@
 
 <!-- ── Onboarding Overlay ─────────────────────────────────────────────────── -->
 <div id="ob-overlay" style="display:none">
+  <button id="ob-close-btn" onclick="obConfirmClose()">✕</button>
   <div id="ob-inner">
     <div id="ob-progress-bar-wrap"><div id="ob-progress-bar"></div></div>
     <div id="ob-dots"></div>
@@ -1090,6 +1110,25 @@
     <div id="ob-nav">
       <button id="ob-back-btn" onclick="obBack()">חזור →</button>
       <button id="ob-next-btn" onclick="obNext()">← הבא</button>
+    </div>
+  </div>
+  <div id="ob-confirm-overlay">
+    <div id="ob-confirm-box">
+      <div style="font-size:40px;margin-bottom:14px">🪪</div>
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:10px">לצאת בלי לסיים?</div>
+      <div style="font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:22px">
+        בלי כרטיס הזהות שלך, ה-AI לא ידע מי אתה.<br>
+        כל פוסט יהיה גנרי — בלי קול, בלי אופי, כמו כולם.<br>
+        <span style="color:var(--accent);font-weight:600">עוד כמה שניות ואתה מסיים 💪</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="obCancelClose()" style="flex:2;padding:13px;background:linear-gradient(135deg,var(--accent),#8b5cf6);border:none;border-radius:var(--radius-sm);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+          אני נשאר! ←
+        </button>
+        <button onclick="closeOnboarding()" style="flex:1;padding:13px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted);font-size:13px;cursor:pointer;font-family:inherit">
+          יציאה
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1144,17 +1183,17 @@ const OB_STEPS = [
       { icon: '🎓', label: 'אקדמי' }, { icon: '⚡', label: 'השראתי' },
     ]
   },
-  { id: 'notWords', emoji: '🚫', title: 'מה אתה לא?', subtitle: 'בחר עד 4 (אופציונלי)', multi: true, maxSelect: 4, optional: true,
+  { id: 'goal', emoji: '🚀', title: 'מה המטרה שלך ברשתות?', subtitle: 'בחר עד 4 שמתאימים לך', multi: true, maxSelect: 4, optional: true,
     options: [
-      { icon: '🙅', label: 'לא רדוד' }, { icon: '🛒', label: 'לא מוכר' },
-      { icon: '⚖️', label: 'לא שיפוטי' }, { icon: '🎭', label: 'לא קלישאות' },
-      { icon: '📢', label: 'לא צעקני' }, { icon: '🤓', label: "לא ז'רגון" },
+      { icon: '🏆', label: 'לבנות סמכות בתחום' }, { icon: '🎯', label: 'להביא לידים ולקוחות' },
+      { icon: '📚', label: 'לחנך ולהעשיר' }, { icon: '🤝', label: 'לבנות קהילה' },
+      { icon: '💼', label: 'לפתח מותג אישי' }, { icon: '✨', label: 'לשתף רעיונות' },
     ]
   },
 ];
 
 let obStep = 0;
-let obAnswers = { field: [], role: [], audience: [], voiceWords: [], notWords: [] };
+let obAnswers = { field: [], role: [], audience: [], voiceWords: [], goal: [] };
 
 // ── Onboarding Functions ──────────────────────────────────────────────────
 function startOnboarding() {
@@ -1165,10 +1204,10 @@ function startOnboarding() {
       role:       id.role       ? id.role.split(', ')       : [],
       audience:   id.audience   ? id.audience.split(', ')   : [],
       voiceWords: id.voiceWords ? id.voiceWords.split(', ') : [],
-      notWords:   id.notWords   ? id.notWords.split(', ')   : [],
+      goal:       id.goal       ? id.goal.split(', ')       : [],
     };
   } else {
-    obAnswers = { field: [], role: [], audience: [], voiceWords: [], notWords: [] };
+    obAnswers = { field: [], role: [], audience: [], voiceWords: [], goal: [] };
   }
   obStep = 0;
   document.getElementById('ob-overlay').style.display = 'flex';
@@ -1178,7 +1217,16 @@ function startOnboarding() {
 
 function closeOnboarding() {
   document.getElementById('ob-overlay').style.display = 'none';
+  document.getElementById('ob-confirm-overlay').style.display = 'none';
   document.body.style.overflow = '';
+}
+
+function obConfirmClose() {
+  document.getElementById('ob-confirm-overlay').style.display = 'flex';
+}
+
+function obCancelClose() {
+  document.getElementById('ob-confirm-overlay').style.display = 'none';
 }
 
 function renderObStep() {
@@ -1285,7 +1333,7 @@ function obOtherChange(stepId) {
 }
 
 function renderObSummary() {
-  const labels = { field: '🎯 תחום', role: '👤 תפקיד', audience: '👥 קהל', voiceWords: '🖊️ סגנון', notWords: '🚫 לא' };
+  const labels = { field: '🎯 תחום', role: '👤 תפקיד', audience: '👥 קהל', voiceWords: '🖊️ סגנון', goal: '🚀 מטרה' };
   document.getElementById('ob-content').innerHTML = `
     <div style="text-align:center">
       <div style="font-size:44px;margin-bottom:10px">🎉</div>
@@ -1334,7 +1382,7 @@ function obFinish() {
   const clean = id => (obAnswers[id] || []).filter(v => v).join(', ');
   const identity = {
     field: clean('field'), role: clean('role'), audience: clean('audience'),
-    voiceWords: clean('voiceWords'), notWords: clean('notWords'),
+    voiceWords: clean('voiceWords'), goal: clean('goal'),
   };
   saveIdentity(identity);
   closeOnboarding();
@@ -1467,7 +1515,7 @@ function renderIdentityDisplay() {
   const rows = [
     { label: 'תחום', val: id.field }, { label: 'מי אתה', val: id.role },
     { label: 'קהל', val: id.audience }, { label: 'סגנון', val: id.voiceWords },
-    { label: 'לא', val: id.notWords },
+    { label: 'מטרה', val: id.goal },
   ].filter(r => r.val);
   el.innerHTML = rows.map(r =>
     `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
@@ -2612,6 +2660,7 @@ if (!getIdentity()) startOnboarding();
   }
 
   document.addEventListener('touchstart', e => {
+    if (document.getElementById('ob-overlay').style.display !== 'none') return;
     if (e.touches.length === 1) {
       // Reset on every new touch — atTopY will be set when scrollY hits 0
       atTopY = window.scrollY === 0 ? e.touches[0].clientY : null;
@@ -2621,6 +2670,7 @@ if (!getIdentity()) startOnboarding();
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
+    if (document.getElementById('ob-overlay').style.display !== 'none') return;
     if (e.touches.length !== 1) return;
     const currentY = e.touches[0].clientY;
 
