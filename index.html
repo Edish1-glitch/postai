@@ -355,6 +355,7 @@
 
     .action-btn.success { border-color: var(--success); color: var(--success); }
     .action-btn.save-btn.saved { border-color: var(--warning); color: var(--warning); }
+    .action-btn.active { border-color: var(--warning); color: var(--warning); }
 
     .result-text {
       font-size: 15px;
@@ -754,6 +755,7 @@
   <div class="tabs">
     <button class="tab active" id="tab-create" onclick="showTab('create')">✨ יצירה</button>
     <button class="tab" id="tab-history" onclick="showTab('history')">📋 היסטוריה</button>
+    <button class="tab" id="tab-favorites" onclick="showTab('favorites')">⭐ מועדפים</button>
     <button class="tab" id="tab-settings" onclick="showTab('settings')">⚙️ הגדרות</button>
   </div>
 
@@ -849,8 +851,11 @@
       <div class="result-header">
         <span class="result-label">הפוסט שלך</span>
         <div class="result-actions">
-          <button class="action-btn save-btn" id="save-btn" onclick="savePost()" title="שמור">
-            🔖 שמור
+          <button class="action-btn" id="star-btn" onclick="toggleCurrentStar()" title="מועדף" style="display:none">
+            ☆ מועדף
+          </button>
+          <button class="action-btn" id="edit-btn" onclick="editCurrentPost()" title="ערוך" style="display:none">
+            ✏️ ערוך
           </button>
           <button class="action-btn" onclick="copyPost()" title="העתק">
             📋 העתק
@@ -892,6 +897,14 @@
       <input class="history-search" type="search" placeholder="🔍 חיפוש..." oninput="setHistorySearch(this.value)" />
     </div>
     <div id="history-list"></div>
+  </div>
+
+  <!-- ── FAVORITES TAB ──────────────────────────────────────────────────── -->
+  <div id="favorites-section" style="display:none">
+    <div class="history-controls">
+      <span class="history-title">⭐ מועדפים</span>
+    </div>
+    <div id="favorites-list"></div>
   </div>
 
   <!-- ── SETTINGS TAB ────────────────────────────────────────────────────── -->
@@ -1038,7 +1051,8 @@ const state = {
   length: 'medium',
   format: 'hook',
   currentPost: '',
-  currentSaved: false
+  currentSaved: false,
+  currentEntryId: null
 };
 
 const PLATFORM_LIMITS = { twitter: 280, threads: 500, linkedin: 700 };
@@ -1072,18 +1086,27 @@ let historyFilter = { platform: 'all', starred: false, search: '' };
 // TABS
 // ═══════════════════════════════════════════════════════════════
 function showTab(name) {
-  ['create', 'history', 'settings'].forEach(t => {
-    document.getElementById(`${t}-section`).classList.toggle('visible', t === 'history' || t === 'settings' ? false : true);
+  // Hide all sections
+  document.getElementById('create-section').style.display = 'none';
+  document.getElementById('history-section').classList.remove('visible');
+  document.getElementById('favorites-section').style.display = 'none';
+  document.getElementById('settings-section').classList.remove('visible');
+
+  // Remove active from all tabs
+  ['create', 'history', 'favorites', 'settings'].forEach(t => {
     document.getElementById(`tab-${t}`)?.classList.remove('active');
   });
 
-  document.getElementById('create-section').style.display = name === 'create' ? 'block' : 'none';
-  document.getElementById('history-section').classList.toggle('visible', name === 'history');
-  document.getElementById('settings-section').classList.toggle('visible', name === 'settings');
+  // Show active
+  if (name === 'create') document.getElementById('create-section').style.display = 'block';
+  else if (name === 'history') document.getElementById('history-section').classList.add('visible');
+  else if (name === 'favorites') document.getElementById('favorites-section').style.display = 'block';
+  else if (name === 'settings') document.getElementById('settings-section').classList.add('visible');
 
   document.getElementById(`tab-${name}`)?.classList.add('active');
 
   if (name === 'history') renderHistory();
+  if (name === 'favorites') renderFavorites();
   if (name === 'settings') { renderPushStatus(); updateStorageInfo(); renderXStatus(); loadIdentityForm(); }
 }
 
@@ -1403,15 +1426,32 @@ async function generate() {
 
     _lastGenTime = Date.now();
     state.currentPost = data.post;
-    state.currentSaved = false;
+    state.currentSaved = true;
 
     document.getElementById('result-text').textContent = data.post;
     resultBox.classList.add('visible');
 
-    // Reset save btn
-    const saveBtn = document.getElementById('save-btn');
-    saveBtn.textContent = '🔖 שמור';
-    saveBtn.classList.remove('saved');
+    // Auto-save to history
+    const autoEntry = {
+      id: Date.now(),
+      post: data.post,
+      topic: document.getElementById('topic-input').value.trim(),
+      platform: state.platform,
+      angle: state.angle,
+      format: state.format,
+      length: state.length,
+      starred: false,
+      date: new Date().toISOString()
+    };
+    const h = getHistory();
+    h.unshift(autoEntry);
+    saveHistory(h);
+    state.currentEntryId = autoEntry.id;
+
+    // Show star and edit buttons
+    document.getElementById('star-btn').style.display = '';
+    document.getElementById('edit-btn').style.display = '';
+    updateStarBtn(false);
 
     updateResultCharPill();
 
@@ -1464,27 +1504,96 @@ function updateHistoryBadge() {
 }
 
 function savePost() {
-  if (!state.currentPost || state.currentSaved) return;
+  // Legacy stub — auto-save now happens in generate()
+}
 
-  const history = getHistory();
-  const entry = {
-    id: Date.now(),
-    post: state.currentPost,
-    platform: state.platform,
-    angle: state.angle,
-    length: state.length,
-    starred: false,
-    date: new Date().toISOString()
-  };
-  history.unshift(entry);
-  saveHistory(history);
-  state.currentSaved = true;
+// ── Star current post (result box) ──────────────────────────────────────────
+function toggleCurrentStar() {
+  if (!state.currentEntryId) return;
+  const h = getHistory();
+  const e = h.find(x => x.id === state.currentEntryId);
+  if (!e) return;
+  e.starred = !e.starred;
+  saveHistory(h);
+  updateStarBtn(e.starred);
+  renderHistory();
+  renderFavorites();
+  toast(e.starred ? '⭐ נוסף למועדפים!' : '☆ הוסר מהמועדפים');
+}
 
-  const btn = document.getElementById('save-btn');
-  btn.textContent = '✅ נשמר';
-  btn.classList.add('saved');
+function updateStarBtn(starred) {
+  const btn = document.getElementById('star-btn');
+  if (!btn) return;
+  btn.textContent = starred ? '⭐ מועדף' : '☆ מועדף';
+  btn.classList.toggle('active', starred);
+}
 
-  toast('🔖 הפוסט נשמר בהיסטוריה!');
+// ── Edit current post (result box) ──────────────────────────────────────────
+function editCurrentPost() {
+  const el = document.getElementById('result-text');
+  const cur = state.currentPost;
+  el.innerHTML = `<textarea id="edit-ta" style="width:100%;min-height:120px;background:var(--surface2);color:var(--text);border:1px solid var(--accent);border-radius:8px;padding:10px;font-size:15px;line-height:1.6;resize:vertical;box-sizing:border-box;direction:rtl;font-family:inherit">${cur.replace(/</g,'&lt;')}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-sm" onclick="saveCurrentEdit()" style="background:var(--accent);color:#fff;border-color:transparent">💾 שמור</button>
+      <button class="btn-sm" onclick="cancelCurrentEdit()">✖ בטל</button>
+    </div>`;
+  document.getElementById('edit-ta').focus();
+}
+
+function saveCurrentEdit() {
+  const ta = document.getElementById('edit-ta');
+  if (!ta) return;
+  const newText = ta.value.trim();
+  if (!newText) return;
+  state.currentPost = newText;
+  document.getElementById('result-text').textContent = newText;
+  updateResultCharPill();
+  if (state.currentEntryId) {
+    const h = getHistory();
+    const e = h.find(x => x.id === state.currentEntryId);
+    if (e) { e.post = newText; saveHistory(h); renderHistory(); renderFavorites(); }
+  }
+  toast('✅ הפוסט עודכן');
+}
+
+function cancelCurrentEdit() {
+  document.getElementById('result-text').textContent = state.currentPost;
+}
+
+// ── Edit history / favorites item ────────────────────────────────────────────
+function editHistoryPost(id) {
+  const entry = getHistory().find(h => h.id == id);
+  if (!entry) return;
+  const textEl = document.getElementById(`ht-${id}`);
+  if (!textEl) return;
+  textEl.classList.add('expanded');
+  textEl.innerHTML = `<textarea id="edit-h-${id}" style="width:100%;min-height:100px;background:var(--surface2);color:var(--text);border:1px solid var(--accent);border-radius:8px;padding:8px;font-size:14px;resize:vertical;box-sizing:border-box;direction:rtl;font-family:inherit">${entry.post.replace(/</g,'&lt;')}</textarea>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-sm" onclick="saveHistoryEdit('${id}')" style="background:var(--accent);color:#fff;border-color:transparent">💾 שמור</button>
+      <button class="btn-sm" onclick="renderHistory();renderFavorites()">✖ בטל</button>
+    </div>`;
+  document.getElementById(`edit-h-${id}`).focus();
+}
+
+function saveHistoryEdit(id) {
+  const ta = document.getElementById(`edit-h-${id}`);
+  if (!ta) return;
+  const newText = ta.value.trim();
+  if (!newText) return;
+  const h = getHistory();
+  const e = h.find(x => x.id == id);
+  if (!e) return;
+  e.post = newText;
+  saveHistory(h);
+  renderHistory();
+  renderFavorites();
+  // Sync result box if this is the current post
+  if (state.currentEntryId == id) {
+    state.currentPost = newText;
+    document.getElementById('result-text').textContent = newText;
+    updateResultCharPill();
+  }
+  toast('✅ הפוסט עודכן');
 }
 
 function setHistoryFilter(type, value, btn) {
@@ -1510,6 +1619,34 @@ function setHistorySearch(val) {
   renderHistory();
 }
 
+function renderHistoryItem(entry) {
+  const date = new Date(entry.date);
+  const dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) +
+                  ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  const escaped = entry.post.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `
+  <div class="history-item ${entry.starred ? 'starred' : ''}" id="hi-${entry.id}">
+    <div class="history-meta">
+      <span class="meta-chip ${entry.platform}">${platformLabel(entry.platform)}</span>
+      <span class="meta-chip">${angleLabel(entry.angle || entry.tone)}</span>
+      ${entry.starred ? '<span style="font-size:14px">⭐</span>' : ''}
+      <span class="meta-date">${dateStr}</span>
+    </div>
+    <div class="history-text" id="ht-${entry.id}">${escaped}</div>
+    <div class="history-item-actions">
+      <button class="btn-sm" onclick="toggleExpand('${entry.id}')">👁 הצג</button>
+      <button class="btn-sm" onclick="copyHistoryPost('${entry.id}')">📋 העתק</button>
+      <button class="btn-sm" onclick="editHistoryPost('${entry.id}')">✏️ ערוך</button>
+      <button class="btn-sm" onclick="recyclePost('${entry.id}')">🔄 מחזר</button>
+      <button class="btn-sm star ${entry.starred ? 'active' : ''}" onclick="toggleStar('${entry.id}')">
+        ${entry.starred ? '⭐' : '☆'} כוכב
+      </button>
+      ${getXAuth() ? `<button class="btn-sm" onclick="schedulePost(${entry.id})">⏰ תזמן</button>` : ''}
+      <button class="btn-sm danger" onclick="deletePost('${entry.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
 function renderHistory() {
   const list = document.getElementById('history-list');
   let history = getHistory();
@@ -1524,40 +1661,31 @@ function renderHistory() {
     list.innerHTML = `
       <div class="history-empty">
         <div class="empty-icon">${isFiltered ? '🔍' : '📭'}</div>
-        <div>${isFiltered ? 'אין תוצאות לסינון זה' : 'אין פוסטים שמורים עדיין'}</div>
+        <div>${isFiltered ? 'אין תוצאות לסינון זה' : 'אין פוסטים עדיין'}</div>
         <div style="font-size:13px;margin-top:8px;color:var(--text-muted)">
-          ${isFiltered ? 'נסה סינון אחר' : 'צור פוסט ולחץ "שמור"'}
+          ${isFiltered ? 'נסה סינון אחר' : 'צור פוסט — יישמר אוטומטית'}
         </div>
       </div>`;
     return;
   }
 
-  list.innerHTML = history.map(entry => {
-    const date = new Date(entry.date);
-    const dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) +
-                    ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-    const escaped = entry.post.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `
-    <div class="history-item ${entry.starred ? 'starred' : ''}" id="hi-${entry.id}">
-      <div class="history-meta">
-        <span class="meta-chip ${entry.platform}">${platformLabel(entry.platform)}</span>
-        <span class="meta-chip">${angleLabel(entry.angle || entry.tone)}</span>
-        ${entry.starred ? '<span style="font-size:14px">⭐</span>' : ''}
-        <span class="meta-date">${dateStr}</span>
-      </div>
-      <div class="history-text" id="ht-${entry.id}">${escaped}</div>
-      <div class="history-item-actions">
-        <button class="btn-sm" onclick="toggleExpand('${entry.id}')">👁 הצג</button>
-        <button class="btn-sm" onclick="copyHistoryPost('${entry.id}')">📋 העתק</button>
-        <button class="btn-sm" onclick="recyclePost('${entry.id}')">🔄 מחזר</button>
-        <button class="btn-sm star ${entry.starred ? 'active' : ''}" onclick="toggleStar('${entry.id}')">
-          ${entry.starred ? '⭐' : '☆'} כוכב
-        </button>
-        ${getXAuth() ? `<button class="btn-sm" onclick="schedulePost(${entry.id})">⏰ תזמן</button>` : ''}
-        <button class="btn-sm danger" onclick="deletePost('${entry.id}')">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
+  list.innerHTML = history.map(renderHistoryItem).join('');
+}
+
+function renderFavorites() {
+  const list = document.getElementById('favorites-list');
+  if (!list) return;
+  const starred = getHistory().filter(e => e.starred);
+  if (starred.length === 0) {
+    list.innerHTML = `
+      <div class="history-empty">
+        <div class="empty-icon">⭐</div>
+        <div>אין מועדפים עדיין</div>
+        <div style="font-size:13px;margin-top:8px;color:var(--text-muted)">לחץ ☆ כוכב על פוסט כדי להוסיפו לכאן</div>
+      </div>`;
+    return;
+  }
+  list.innerHTML = starred.map(renderHistoryItem).join('');
 }
 
 function platformLabel(p) {
@@ -1617,22 +1745,27 @@ function toggleStar(id) {
   entry.starred = !entry.starred;
   saveHistory(history);
   renderHistory();
-  toast(entry.starred ? '⭐ סומן כמצליח!' : '☆ הכוכב הוסר');
+  renderFavorites();
+  // Sync star-btn in result box if this is the current post
+  if (state.currentEntryId == id) updateStarBtn(entry.starred);
+  toast(entry.starred ? '⭐ נוסף למועדפים!' : '☆ הוסר מהמועדפים');
 }
 
 function deletePost(id) {
   const history = getHistory().filter(h => h.id != id);
   saveHistory(history);
   renderHistory();
+  renderFavorites();
   updateStorageInfo();
   toast('🗑 נמחק');
 }
 
 function clearAllHistory() {
   if (!getHistory().length) { toast('📭 אין פוסטים למחיקה'); return; }
-  if (!confirm('למחוק את כל הפוסטים השמורים?')) return;
+  if (!confirm('למחוק את כל הפוסטים?')) return;
   saveHistory([]);
   renderHistory();
+  renderFavorites();
   updateStorageInfo();
   toast('🗑 כל הפוסטים נמחקו');
 }
