@@ -1204,28 +1204,34 @@ const OB_STEPS = [
 let obStep = 0;
 let obAnswers = { field: [], role: [], audience: [], voiceWords: [], goal: [] };
 
+// ── Onboarding helpers ────────────────────────────────────────────────────
+const obOverlay       = document.getElementById('ob-overlay');
+const _splitOrEmpty   = v => v ? v.split(', ') : [];
+const getCleanVals    = id => (obAnswers[id] || []).filter(v => v);
+const _isPredefined   = (v, step) => step.options.some(o => o.label === v);
+
 // ── Onboarding Functions ──────────────────────────────────────────────────
 function startOnboarding() {
   const id = getIdentity();
   if (id) {
     obAnswers = {
-      field:      id.field      ? id.field.split(', ')      : [],
-      role:       id.role       ? id.role.split(', ')       : [],
-      audience:   id.audience   ? id.audience.split(', ')   : [],
-      voiceWords: id.voiceWords ? id.voiceWords.split(', ') : [],
-      goal:       id.goal       ? id.goal.split(', ')       : [],
+      field:      _splitOrEmpty(id.field),
+      role:       _splitOrEmpty(id.role),
+      audience:   _splitOrEmpty(id.audience),
+      voiceWords: _splitOrEmpty(id.voiceWords),
+      goal:       _splitOrEmpty(id.goal),
     };
   } else {
     obAnswers = { field: [], role: [], audience: [], voiceWords: [], goal: [] };
   }
   obStep = 0;
-  document.getElementById('ob-overlay').style.display = 'flex';
+  obOverlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   renderObStep();
 }
 
 function closeOnboarding() {
-  document.getElementById('ob-overlay').style.display = 'none';
+  obOverlay.style.display = 'none';
   document.getElementById('ob-confirm-overlay').style.display = 'none';
   document.body.style.overflow = '';
 }
@@ -1262,8 +1268,8 @@ function renderObStep() {
   const step = OB_STEPS[obStep];
   const currentVals = obAnswers[step.id] || [];
   // "Other" is active when there are values not matching any predefined option
-  const isOtherActive = currentVals.some(v => !step.options.find(o => o.label === v));
-  const otherVals = currentVals.filter(v => !step.options.find(o => o.label === v));
+  const isOtherActive = currentVals.some(v => !_isPredefined(v, step));
+  const otherVals = currentVals.filter(v => !_isPredefined(v, step));
 
   const _hesc = s => s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   document.getElementById('ob-content').innerHTML = `
@@ -1309,7 +1315,7 @@ function obToggleOption(stepId, label, maxSelect) {
 }
 
 // One-time delegated listener for onboarding option cards
-document.getElementById('ob-overlay').addEventListener('click', function(e) {
+obOverlay.addEventListener('click', function(e) {
   const card = e.target.closest('.ob-card:not(.ob-other)');
   if (!card || !card.dataset.stepid) return;
   obToggleOption(card.dataset.stepid, card.dataset.label, parseInt(card.dataset.maxselect, 10));
@@ -1318,8 +1324,8 @@ document.getElementById('ob-overlay').addEventListener('click', function(e) {
 function obActivateOther(stepId) {
   const step = OB_STEPS.find(s => s.id === stepId);
   const arr = obAnswers[stepId] || [];
-  const predefined = arr.filter(v => step.options.find(o => o.label === v));
-  const hasOther = arr.some(v => !step.options.find(o => o.label === v));
+  const predefined = arr.filter(v => _isPredefined(v, step));
+  const hasOther = arr.some(v => !_isPredefined(v, step));
   if (hasOther) {
     obAnswers[stepId] = predefined;   // toggle OFF — remove manual entries
   } else {
@@ -1335,7 +1341,7 @@ function obActivateOther(stepId) {
 function obOtherChange(stepId) {
   const val = document.getElementById('ob-other-input')?.value || '';
   const step = OB_STEPS.find(s => s.id === stepId);
-  const predefined = (obAnswers[stepId] || []).filter(v => step.options.find(o => o.label === v));
+  const predefined = (obAnswers[stepId] || []).filter(v => _isPredefined(v, step));
   const manualVals = val.split(',').map(v => v.trim()).filter(Boolean);
   // Always keep at least [''] to keep "other" mode active even if field is empty
   obAnswers[stepId] = [...predefined, ...(manualVals.length ? manualVals : [''])];
@@ -1351,7 +1357,7 @@ function renderObSummary() {
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:10px">
       ${OB_STEPS.map(step => {
-        const vals = (obAnswers[step.id] || []).filter(v => v); // remove empty markers
+        const vals = getCleanVals(step.id);
         const display = vals.length ? vals.join(' · ') : '—';
         return `<div class="ob-summary-row">
           <div class="ob-summary-label">${labels[step.id]}</div>
@@ -1370,7 +1376,7 @@ function obNext() {
   if (otherEl) obOtherChange(OB_STEPS[obStep].id);
 
   const step = OB_STEPS[obStep];
-  const realVals = (obAnswers[step.id] || []).filter(v => v); // strip empty markers
+  const realVals = getCleanVals(step.id);
   if (realVals.length === 0 && !step.optional) {
     toast('בחר לפחות אפשרות אחת כדי להמשיך');
     return;
@@ -1388,7 +1394,7 @@ function obBack() {
 }
 
 function obFinish() {
-  const clean = id => (obAnswers[id] || []).filter(v => v).join(', ');
+  const clean = id => getCleanVals(id).join(', ');
   const identity = {
     field: clean('field'), role: clean('role'), audience: clean('audience'),
     voiceWords: clean('voiceWords'), goal: clean('goal'),
@@ -2784,7 +2790,7 @@ if (!getIdentity()) startOnboarding();
   }
 
   document.addEventListener('touchstart', e => {
-    if (document.getElementById('ob-overlay').style.display !== 'none') return;
+    if (obOverlay.style.display !== 'none') return;
     if (e.touches.length === 1) {
       // Reset on every new touch — atTopY will be set when scrollY hits 0
       atTopY = window.scrollY === 0 ? e.touches[0].clientY : null;
@@ -2794,7 +2800,7 @@ if (!getIdentity()) startOnboarding();
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
-    if (document.getElementById('ob-overlay').style.display !== 'none') return;
+    if (obOverlay.style.display !== 'none') return;
     if (e.touches.length !== 1) return;
     const currentY = e.touches[0].clientY;
 
