@@ -407,7 +407,7 @@
     }
     .filter-pills { display: flex; gap: 6px; }
     .filter-pill {
-      background: var(--card);
+      background: var(--surface2);
       border: 1.5px solid var(--border);
       color: var(--text-muted);
       border-radius: 20px;
@@ -424,7 +424,7 @@
     .history-search {
       flex: 1;
       min-width: 120px;
-      background: var(--card);
+      background: var(--surface2);
       border: 1.5px solid var(--border);
       border-radius: 20px;
       padding: 5px 14px;
@@ -1160,6 +1160,11 @@ const PLATFORM_LIMITS = { twitter: 280, threads: 500, linkedin: 700 };
 const STORAGE_KEY = 'postai_history_v2';
 const IDENTITY_KEY = 'postai_identity_v1';
 
+// ── Shared helpers ────────────────────────────────────────────────────────
+const getStorageItem  = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; } };
+const truncate        = (text, max = 80) => text.slice(0, max) + (text.length > max ? '...' : '');
+const formatDateTimeHE = date => date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) + ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING — DATA
 // ═══════════════════════════════════════════════════════════════
@@ -1510,10 +1515,7 @@ function updateResultCharPill() {
 // ═══════════════════════════════════════════════════════════════
 // IDENTITY CARD
 // ═══════════════════════════════════════════════════════════════
-function getIdentity() {
-  try { return JSON.parse(localStorage.getItem(IDENTITY_KEY)) || null; }
-  catch { return null; }
-}
+function getIdentity() { return getStorageItem(IDENTITY_KEY, null); }
 
 function saveIdentity(identity) {
   localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
@@ -1937,18 +1939,14 @@ async function copyPost() {
 // ═══════════════════════════════════════════════════════════════
 // STAGE 2 — HISTORY & SAVE
 // ═══════════════════════════════════════════════════════════════
-function getHistory() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
-}
+function getHistory() { return getStorageItem(STORAGE_KEY, []); }
 
 function saveHistory(arr) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-  updateHistoryBadge();
+  updateHistoryBadge(arr.length);
 }
 
-function updateHistoryBadge() {
-  const count = getHistory().length;
+function updateHistoryBadge(count = getHistory().length) {
   const badge = document.getElementById('history-badge');
   if (count > 0) {
     badge.textContent = count > 99 ? '99+' : count;
@@ -1956,10 +1954,6 @@ function updateHistoryBadge() {
   } else {
     badge.style.display = 'none';
   }
-}
-
-function savePost() {
-  // Legacy stub — auto-save now happens in generate()
 }
 
 // ── Star current post (result box) ──────────────────────────────────────────
@@ -1971,8 +1965,7 @@ function toggleCurrentStar() {
   e.starred = !e.starred;
   saveHistory(h);
   updateStarBtn(e.starred);
-  renderHistory();
-  renderFavorites();
+  renderBoth();
   toast(e.starred ? '⭐ נוסף למועדפים!' : '☆ הוסר מהמועדפים');
 }
 
@@ -2040,8 +2033,7 @@ function saveHistoryEdit(id) {
   if (!e) return;
   e.post = newText;
   saveHistory(h);
-  renderHistory();
-  renderFavorites();
+  renderBoth();
   // Sync result box if this is the current post
   if (state.currentEntryId == id) {
     state.currentPost = newText;
@@ -2076,8 +2068,7 @@ function setHistorySearch(val) {
 
 function renderHistoryItem(entry) {
   const date = new Date(entry.date);
-  const dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) +
-                  ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = formatDateTimeHE(date);
   const escaped = entry.post.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return `
   <div class="history-item ${entry.starred ? 'starred' : ''}" id="hi-${entry.id}">
@@ -2126,6 +2117,8 @@ function renderHistory() {
 
   list.innerHTML = history.map(renderHistoryItem).join('');
 }
+
+function renderBoth() { renderHistory(); renderFavorites(); }
 
 function renderFavorites() {
   const list = document.getElementById('favorites-list');
@@ -2199,8 +2192,7 @@ function toggleStar(id) {
   if (!entry) return;
   entry.starred = !entry.starred;
   saveHistory(history);
-  renderHistory();
-  renderFavorites();
+  renderBoth();
   // Sync star-btn in result box if this is the current post
   if (state.currentEntryId == id) updateStarBtn(entry.starred);
   toast(entry.starred ? '⭐ נוסף למועדפים!' : '☆ הוסר מהמועדפים');
@@ -2209,8 +2201,7 @@ function toggleStar(id) {
 function deletePost(id) {
   const history = getHistory().filter(h => h.id != id);
   saveHistory(history);
-  renderHistory();
-  renderFavorites();
+  renderBoth();
   updateStorageInfo();
   toast('🗑 נמחק');
 }
@@ -2219,8 +2210,7 @@ function clearAllHistory() {
   if (!getHistory().length) { toast('📭 אין פוסטים למחיקה'); return; }
   if (!confirm('למחוק את כל הפוסטים?')) return;
   saveHistory([]);
-  renderHistory();
-  renderFavorites();
+  renderBoth();
   updateStorageInfo();
   toast('🗑 כל הפוסטים נמחקו');
 }
@@ -2358,13 +2348,9 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(console.error);
 }
 
-// Init suggestions on load
-refreshSuggestions();
-
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-updateHistoryBadge();
 
 // Auto-schedule daily reminder if previously enabled
 if (localStorage.getItem('postai_daily_reminder') === 'true' &&
@@ -2382,10 +2368,10 @@ const X_STORAGE = {
   QUEUE:    'postai_x_queue',
 };
 
-function getXAuth()     { try { return JSON.parse(localStorage.getItem(X_STORAGE.AUTH)) || null; } catch { return null; } }
-function getXUsage()    { try { return JSON.parse(localStorage.getItem(X_STORAGE.USAGE)) || { month: '', count: 0 }; } catch { return { month: '', count: 0 }; } }
-function getXSettings() { try { return JSON.parse(localStorage.getItem(X_STORAGE.SETTINGS)) || { dailyLimit: 3 }; } catch { return { dailyLimit: 3 }; } }
-function getXQueue()    { try { return JSON.parse(localStorage.getItem(X_STORAGE.QUEUE)) || []; } catch { return []; } }
+function getXAuth()     { return getStorageItem(X_STORAGE.AUTH,     null); }
+function getXUsage()    { return getStorageItem(X_STORAGE.USAGE,    { month: '', count: 0 }); }
+function getXSettings() { return getStorageItem(X_STORAGE.SETTINGS, { dailyLimit: 3 }); }
+function getXQueue()    { return getStorageItem(X_STORAGE.QUEUE,    []); }
 
 function saveXAuth(data)     { localStorage.setItem(X_STORAGE.AUTH, JSON.stringify(data)); }
 function saveXUsage(data)    { localStorage.setItem(X_STORAGE.USAGE, JSON.stringify(data)); }
@@ -2544,7 +2530,7 @@ function schedulePost(historyId) {
     <div class="modal-box">
       <div class="modal-title">⏰ תזמן פרסום ל-𝕏</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">
-        ${entry.post.slice(0, 80)}${entry.post.length > 80 ? '...' : ''}
+        ${truncate(entry.post, 80)}
       </div>
       <input type="datetime-local" id="schedule-dt" value="${defaultVal}"
         style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);
@@ -2605,9 +2591,8 @@ function renderXQueue() {
 
   container.innerHTML = queue.map(q => {
     const dt = new Date(q.scheduledAt);
-    const dtStr = dt.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) + ' ' +
-                  dt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-    const preview = q.text.slice(0, 60) + (q.text.length > 60 ? '...' : '');
+    const dtStr = formatDateTimeHE(dt);
+    const preview = truncate(q.text, 60);
     const isPast = dt <= new Date();
     return `
     <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px">
@@ -2708,7 +2693,7 @@ async function checkXQueue() {
       // Show SW notification with post action
       navigator.serviceWorker.ready.then(reg => {
         reg.showNotification('PostAI — הגיע זמן הפרסום! 𝕏', {
-          body: item.text.slice(0, 100),
+          body: truncate(item.text, 100),
           icon: '/icons/icon-192.png',
           dir: 'rtl',
           lang: 'he',
@@ -2731,7 +2716,7 @@ async function checkXQueue() {
           <div class="modal-box">
             <div class="modal-title">⏰ הגיע זמן הפרסום!</div>
             <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">
-              ${item.text.slice(0, 120)}${item.text.length > 120 ? '...' : ''}
+              ${truncate(item.text, 120)}
             </div>
             <div style="display:flex;gap:8px">
               <button class="btn-sm" style="flex:1;padding:10px;background:var(--accent);color:#fff;border-color:transparent"
